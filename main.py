@@ -6,6 +6,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from email.mime.text import MIMEText
 import smtplib
 from dotenv import load_dotenv
+import pprint
 
 # 環境変数のロード
 load_dotenv()
@@ -18,14 +19,18 @@ def fetch_entries():
     notion = Client(auth=os.getenv("NOTION_API_KEY"))
     database_id = os.getenv("NOTION_PAGE_ID")
     one_week_ago = (datetime.date.today() - datetime.timedelta(days=7)).isoformat()
+    one_month_ago = (datetime.date.today() - datetime.timedelta(days=30)).isoformat()
+    one_year_ago = (datetime.date.today() - datetime.timedelta(days=365)).isoformat()
 
-    # クエリで日付フィルタリング
+    # クエリで日付フィルタリング 
+    ### 06.05 memo: デフォルトでは100件上限のようだ。一年（365日）を取る場合、for文などで回す必要があるか。
     response = notion.databases.query(
         **{
             "database_id": database_id,
             "filter": {
                 "property": "Date",
-                "date": {"on_or_after": one_week_ago}
+                # "date": {"on_or_after": one_week_ago}
+                "date": {"on_or_after": one_year_ago}
             },
             "sorts": [{"property": "Date", "direction": "ascending"}]
         }
@@ -85,17 +90,49 @@ def analyze(entries):
     # 日付と本文をまとめてプロンプト化
     diary_text = "\n".join([f"{e['date']}: {e['text']}" for e in entries])
     prompt = (
-        "次の一週間の日誌の内容を、感情と思考の観点から分析し、"
+        "次の日記を読み、この期間での筆者の心境の変化や、何に注目しているのか、本人も気づいていないような変化を抽出してください。"
         "要約と感情の傾向を含むレポートを作成してください。\n" + diary_text
     )
 
-    resp = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.7,
-        max_tokens=800
+    # resp = client.chat.completions.create(
+    #     model="o4-mini",
+    #     messages=[{"role": "user", "content": prompt}],
+    #     # temperature=0.7,
+    #     max_completion_tokens=1200
+    # )
+
+    resp = client.responses.create(
+        model="o4-mini",
+        reasoning={"effort": "high"},
+        input=[
+            {
+                "role": "user",
+                "content": str(prompt)
+            }
+        ],
+        max_output_tokens=3000
     )
-    return resp.choices[0].message.content
+
+    # print(type(resp))
+    # print(dir(resp))
+    # print(resp)
+    # print(resp.to_dict())
+
+    # return resp.message["content"]
+    # return resp.choices[0].message.content
+    # 辞書化して中身を確認
+    data = resp.to_dict()
+
+    # 「type":"message"」の要素を探す
+    message_block = next(
+        (item for item in data["output"] if item.get("type") == "message"),
+        None
+    )
+    if not message_block:
+        raise RuntimeError("アシスタント応答が見つかりませんでした。")
+
+    # content はリストになっているので、最初の要素の "text" キーを取得
+    return message_block["content"][0]["text"]
 
 
 def send_report(report: str):
