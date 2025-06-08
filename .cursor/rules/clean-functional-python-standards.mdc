@@ -1,0 +1,698 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# CleanFunctional Python Standards (CFPS) - 認知コスト最適化版
+
+**重要**: このガイドラインはPythonの特性を活かした関数型プログラミング、適切な凝集度・結合度、型ヒントを採用しつつ、**認知コストを7以下に抑える**ことを最優先とします。
+
+## 🧠 認知コスト管理の基本原則
+
+### 脳に収まるコード（7つルール）
+実装時は以下の要素数を合計して**7以下**に収める：
+1. 分岐（if文、match文、三項演算子）の数
+2. ローカル変数の数（引数含む）
+3. 呼び出す他の関数・メソッドの数
+4. データ構造の複雑さ（ネストした辞書・リストは複数カウント）
+
+**この制約を超える場合のみ**分割や抽象化を検討する。
+
+---
+
+## 1. 関数設計と純粋関数の原則
+
+### 1.1 Pythonic純粋関数の実装
+
+- 引数が同じ場合、常に同じ結果を返す関数を**自然に書ける場合のみ**優先する
+- 副作用を持たない関数が**複雑化を招かない範囲で**実装する
+- **禁止**: 純粋関数にするために引数を過度に増やすこと
+
+```python
+# ❌ 過剰な純粋関数化（認知コスト: 引数4個 + if文2個 + 変数2個 = 8個）
+def validate_user(user: dict, current_time: datetime, config: dict, logger) -> dict:
+    is_valid = user.get('email') and user.get('name')
+    is_active = current_time < user.get('expires_at')
+    if not is_valid:
+        logger.warning('Invalid user data')
+        return {'valid': False, 'reason': 'invalid'}
+    if not is_active:
+        logger.warning('User expired')
+        return {'valid': False, 'reason': 'expired'}
+    return {'valid': True}
+
+# ✅ 実用的なアプローチ（認知コスト: 引数1個 + if文2個 + 変数3個 = 6個）
+def validate_user(user: dict) -> dict:
+    now = datetime.now()
+    is_valid = user.get('email') and user.get('name')
+    is_active = now < user.get('expires_at', now)
+    
+    if not is_valid:
+        return {'valid': False, 'reason': 'invalid'}
+    if not is_active:
+        return {'valid': False, 'reason': 'expired'}
+    
+    return {'valid': True}
+```
+
+### 1.2 Pythonの関数型機能の適度な活用
+
+- `map()`、`filter()`、リスト内包表記を使用するが、可読性を損なう場合は従来のループも許可
+- 宣言型を優先するが、認知コストが7を超える場合は例外とする
+- `functools`モジュールの活用（`reduce`、`partial`、`lru_cache`）
+
+```python
+from functools import reduce, partial
+from typing import List, Callable
+
+# ✅ シンプルな関数型アプローチ（認知コスト: 変数2個 + 関数呼び出し2個 = 4個）
+def process_items(items: List[dict]) -> List[dict]:
+    filtered = [item for item in items if item['value'] > 10]
+    return [{'value': item['value'] * 2, **item} for item in filtered]
+
+# ✅ 関数型らしいアプローチ
+def process_items_functional(items: List[dict]) -> List[dict]:
+    return list(map(
+        lambda item: {'value': item['value'] * 2, **item},
+        filter(lambda item: item['value'] > 10, items)
+    ))
+
+# ✅ 複雑な場合は従来型も許可（認知コスト制限内であれば）
+def process_complex_items(items: List[dict]) -> List[dict]:
+    result = []
+    for item in items:
+        if item['value'] > 10 and item.get('category') != 'excluded':
+            processed = item.copy()
+            processed['value'] *= 2
+            processed['processed'] = True
+            result.append(processed)
+    return result
+```
+
+### 1.3 Pythonic制御構造の最適化
+
+- if文のネストは禁止（認知コスト増大）
+- 早期リターンとガード節を活用
+- **30行を超える場合のみ**関数分割を検討
+- パターンマッチング（Python 3.10+）の活用
+
+```python
+# ✅ 認知コストを抑えた制御構造
+def process_value(value: float) -> str:
+    if value <= 0:
+        return 'non-positive'
+    if value < 10:
+        return 'small positive'
+    return 'large positive'
+
+# ✅ パターンマッチングの活用（Python 3.10+）
+def handle_response(response: dict) -> str:
+    match response.get('status'):
+        case 200:
+            return 'success'
+        case 404:
+            return 'not found'
+        case 500:
+            return 'server error'
+        case _:
+            return 'unknown status'
+```
+
+## 2. 凝集度と結合度の最適化
+
+### 2.1 Pythonにおける高凝集性の追求
+
+#### 1. 機能的凝集（最も望ましい）
+単一の定義されたタスクを実現し、7つ以下の要素で構成される。
+
+```python
+import math
+
+# 機能的凝集の例（認知コスト: 引数4個 + 計算1個 = 5個）
+def calculate_distance(x1: float, y1: float, x2: float, y2: float) -> float:
+    return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+```
+
+#### 2. 逐次的凝集
+連鎖した処理を一つのモジュールにまとめるが、**認知コスト7以下の範囲で**実装。
+
+```python
+# ✅ 適切な逐次的凝集（認知コスト: 変数3個 + 関数呼び出し3個 = 6個）
+def process_and_save_user_data(user_id: str) -> None:
+    user_data = fetch_user_data(user_id)
+    processed_data = transform_user_data(user_data)
+    save_user_data(processed_data)
+
+# ❌ 過剰な分割（認知コストは低いが関数が多すぎる）
+def process_user_data_verbose(user_id: str) -> None:
+    raw_data = fetch_raw_user_data(user_id)
+    validated_data = validate_user_data(raw_data)
+    normalized_data = normalize_user_data(validated_data)
+    enriched_data = enrich_user_data(normalized_data)
+    final_data = finalize_user_data(enriched_data)
+    save_user_data(final_data)
+```
+
+### 2.2 Pythonにおける低結合度の追求
+
+#### 1. メッセージ結合（最も望ましい）
+```python
+from abc import ABC, abstractmethod
+from typing import Protocol
+
+# Observer パターンの実装
+class EventObserver(Protocol):
+    def handle_event(self, event: dict) -> None: ...
+
+class UserService:
+    def __init__(self):
+        self._observers: List[EventObserver] = []
+    
+    def add_observer(self, observer: EventObserver) -> None:
+        self._observers.append(observer)
+    
+    def create_user(self, user_data: dict) -> None:
+        # ユーザー作成ロジック
+        event = {'type': 'user_created', 'data': user_data}
+        for observer in self._observers:
+            observer.handle_event(event)
+```
+
+#### 2. データ結合
+```python
+# ✅ シンプルなデータ型のみを渡す
+def calculate_tax(amount: float, rate: float) -> float:
+    return amount * rate
+
+# ✅ データクラスを使った構造化データ
+from dataclasses import dataclass
+
+@dataclass
+class TaxCalculation:
+    amount: float
+    rate: float
+    result: float
+```
+
+## 3. Pythonの型システムと型ヒントの活用
+
+### 3.1 型ヒントの実用的原則
+
+- `typing`モジュールを積極的に活用
+- **認知コストを考慮して無駄な型定義は避ける**
+- 実際に制約があるもののみ厳密に定義
+
+```python
+from typing import Dict, List, Optional, Union, Literal, TypeAlias
+from enum import Enum
+
+# ❌ 過剰な型定義（認知コスト増大）
+UserId = str
+UserName = str  
+UserEmail = str
+
+# ✅ 実用的な型定義
+UserRole = Literal['admin', 'user', 'guest']  # 実際に制約があるもののみ
+
+class UserStatus(Enum):
+    ACTIVE = 'active'
+    INACTIVE = 'inactive'
+    SUSPENDED = 'suspended'
+
+# 型エイリアスの活用
+UserDict: TypeAlias = Dict[str, Union[str, int, UserRole]]
+
+@dataclass
+class User:
+    id: str
+    name: str
+    email: str
+    role: UserRole
+    status: UserStatus
+    created_at: datetime
+```
+
+### 3.2 型安全性の確保
+
+- `Any`型の使用は必要最小限に
+- 型ガード関数を活用（認知コスト7以下の範囲で）
+- `Generic`やプロトコルは複雑になりすぎない範囲で活用
+
+```python
+from typing import Any, TypeGuard, Protocol
+
+# ✅ 実用的な型ガード（認知コスト: 条件4個 + 変数1個 = 5個）
+def is_user_dict(obj: Any) -> TypeGuard[UserDict]:
+    return (
+        isinstance(obj, dict) and
+        'id' in obj and
+        'name' in obj and
+        'email' in obj and
+        'role' in obj
+    )
+
+# ✅ プロトコルを使った構造的サブタイピング
+class Drawable(Protocol):
+    def draw(self) -> None: ...
+
+def render_shapes(shapes: List[Drawable]) -> None:
+    for shape in shapes:
+        shape.draw()
+```
+
+### 3.3 Python固有の型機能活用
+
+```python
+from typing import TypeVar, Generic, Optional, Union
+from collections.abc import Callable, Iterator
+
+# ジェネリクスの活用
+T = TypeVar('T')
+
+class Repository(Generic[T]):
+    def __init__(self, item_type: type[T]):
+        self._items: List[T] = []
+        self._item_type = item_type
+    
+    def add(self, item: T) -> None:
+        self._items.append(item)
+    
+    def get_by_id(self, item_id: str) -> Optional[T]:
+        # 実装省略
+        pass
+
+# Union型とOptional型
+def process_input(value: Union[str, int, None]) -> str:
+    if value is None:
+        return 'empty'
+    return str(value)
+
+# Callable型
+def apply_operation(values: List[int], operation: Callable[[int], int]) -> List[int]:
+    return [operation(v) for v in values]
+```
+
+## 4. Pythonにおけるエラーハンドリング
+
+### 4.1 例外処理の実用的原則
+
+- **すべての関数にtry-except文を書く必要はない**
+- 例外は自然に上位に伝播させることを許可
+- **重要な境界でのみ**明示的な例外処理を行う
+- カスタム例外クラスの活用
+
+```python
+# カスタム例外の定義
+class ValidationError(ValueError):
+    """バリデーションエラー用のカスタム例外"""
+    pass
+
+class UserNotFoundError(Exception):
+    """ユーザーが見つからない場合の例外"""
+    pass
+
+# ❌ 過剰な例外処理（認知コスト高）
+def validate_email_verbose(email: str) -> tuple[bool, str]:
+    try:
+        if not email:
+            return False, 'Email required'
+        if '@' not in email:
+            return False, 'Invalid format'
+        if len(email) > 100:
+            return False, 'Email too long'
+        return True, 'Valid'
+    except Exception as e:
+        return False, f'Validation failed: {e}'
+
+# ✅ 実用的な例外処理（認知コスト: if文3個 + 引数1個 = 4個）
+def validate_email(email: str) -> None:
+    if not email:
+        raise ValidationError('Email required')
+    if '@' not in email:
+        raise ValidationError('Invalid email format')
+    if len(email) > 100:
+        raise ValidationError('Email too long')
+```
+
+### 4.2 コンテキストマネージャーの活用
+
+```python
+from contextlib import contextmanager
+from typing import Generator
+
+# ✅ ファイル処理での例外安全性
+def process_file(file_path: str) -> dict:
+    try:
+        with open(file_path, 'r') as file:
+            content = file.read()
+            return json.loads(content)
+    except FileNotFoundError:
+        raise UserNotFoundError(f'File not found: {file_path}')
+    except json.JSONDecodeError as e:
+        raise ValidationError(f'Invalid JSON: {e}')
+
+# ✅ カスタムコンテキストマネージャー
+@contextmanager
+def database_transaction() -> Generator[None, None, None]:
+    transaction = begin_transaction()
+    try:
+        yield
+        transaction.commit()
+    except Exception:
+        transaction.rollback()
+        raise
+    finally:
+        transaction.close()
+```
+
+### 4.3 ログ出力との組み合わせ
+
+```python
+import logging
+from functools import wraps
+
+logger = logging.getLogger(__name__)
+
+def log_exceptions(func: Callable) -> Callable:
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            logger.exception(f'Error in {func.__name__}: {e}')
+            raise
+    return wrapper
+
+# ✅ 重要な境界での例外ログ
+@log_exceptions
+def api_endpoint(request: dict) -> dict:
+    user_id = request.get('user_id')
+    if not user_id:
+        raise ValidationError('user_id is required')
+    
+    user = get_user(user_id)  # この中で例外が発生する可能性
+    return {'user': user}
+```
+
+## 5. Pythonにおけるアーキテクチャ設計
+
+### 5.1 モジュール・パッケージ設計
+
+```python
+# ✅ 適度なレイヤー分離（小規模アプリ向け）
+
+# domain/user.py - ドメインレイヤー
+@dataclass
+class User:
+    id: str
+    name: str
+    email: str
+    
+    def is_valid(self) -> bool:
+        return bool(self.email and self.name)
+
+# services/user_service.py - サービスレイヤー
+class UserService:
+    def __init__(self, repository: UserRepository):
+        self._repository = repository
+    
+    async def get_user(self, user_id: str) -> Optional[User]:
+        return await self._repository.find_by_id(user_id)
+    
+    async def create_user(self, user_data: dict) -> User:
+        user = User(**user_data)
+        if not user.is_valid():
+            raise ValidationError('Invalid user data')
+        return await self._repository.save(user)
+
+# api/user_controller.py - コントローラーレイヤー
+from fastapi import FastAPI, HTTPException
+
+class UserController:
+    def __init__(self, user_service: UserService):
+        self._user_service = user_service
+    
+    async def get_user(self, user_id: str) -> dict:
+        user = await self._user_service.get_user(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail='User not found')
+        return asdict(user)
+```
+
+### 5.2 依存性注入とテスト容易性
+
+```python
+from abc import ABC, abstractmethod
+from typing import Protocol
+
+# ✅ プロトコルベースの依存性注入
+class UserRepository(Protocol):
+    async def find_by_id(self, user_id: str) -> Optional[User]: ...
+    async def save(self, user: User) -> User: ...
+
+class PostgresUserRepository:
+    def __init__(self, connection: Connection):
+        self._conn = connection
+    
+    async def find_by_id(self, user_id: str) -> Optional[User]:
+        # PostgreSQL固有の実装
+        pass
+
+# ✅ 依存性注入コンテナ（シンプル版）
+class Container:
+    def __init__(self):
+        self._services = {}
+    
+    def register(self, interface: type, implementation: type) -> None:
+        self._services[interface] = implementation
+    
+    def get(self, interface: type):
+        return self._services[interface]()
+```
+
+### 5.3 非同期処理の活用
+
+```python
+import asyncio
+from typing import AsyncGenerator
+
+# ✅ 非同期関数の実装
+async def fetch_user_data(user_ids: List[str]) -> List[User]:
+    async def fetch_single_user(user_id: str) -> User:
+        # 非同期でユーザーデータを取得
+        await asyncio.sleep(0.1)  # 模擬的な非同期処理
+        return User(id=user_id, name=f'User {user_id}', email=f'{user_id}@example.com')
+    
+    tasks = [fetch_single_user(uid) for uid in user_ids]
+    return await asyncio.gather(*tasks)
+
+# ✅ 非同期ジェネレータ
+async def stream_users() -> AsyncGenerator[User, None]:
+    for i in range(100):
+        user = await fetch_single_user(str(i))
+        yield user
+        await asyncio.sleep(0.01)  # 適度な間隔
+```
+
+## 6. Pythonにおけるテスト戦略
+
+### 6.1 pytestを使った単体テスト
+
+```python
+import pytest
+from unittest.mock import Mock, AsyncMock
+
+# ✅ 認知コストを抑えたテスト
+def test_validate_email_success():
+    # 正常系テスト（認知コスト: 変数1個 + 関数呼び出し1個 = 2個）
+    email = 'test@example.com'
+    validate_email(email)  # 例外が発生しなければ成功
+
+def test_validate_email_failure():
+    # 異常系テスト
+    with pytest.raises(ValidationError, match='Email required'):
+        validate_email('')
+
+# ✅ 非同期テストとモック
+@pytest.mark.asyncio
+async def test_user_service_get_user():
+    # モックリポジトリの作成
+    mock_repo = Mock(spec=UserRepository)
+    mock_repo.find_by_id = AsyncMock(return_value=User('1', 'Test', 'test@example.com'))
+    
+    service = UserService(mock_repo)
+    user = await service.get_user('1')
+    
+    assert user is not None
+    assert user.name == 'Test'
+    mock_repo.find_by_id.assert_called_once_with('1')
+```
+
+### 6.2 型チェックとリンター
+
+```python
+# mypy設定（mypy.ini）
+"""
+[mypy]
+python_version = 3.11
+strict = True
+warn_return_any = True
+warn_unused_configs = True
+disallow_untyped_defs = True
+"""
+
+# ✅ 型ヒント完備のコード
+def process_users(users: List[User], filter_func: Callable[[User], bool]) -> List[dict]:
+    filtered_users = [user for user in users if filter_func(user)]
+    return [asdict(user) for user in filtered_users]
+```
+
+## 7. Pythonのベストプラクティス
+
+### 7.1 PEP準拠とコード品質
+
+```python
+# PEP 8準拠のコーディングスタイル
+from typing import Final
+
+# ✅ 定数の定義
+MAX_RETRY_COUNT: Final = 3
+DEFAULT_TIMEOUT: Final = 30.0
+
+# ✅ クラスの命名規則と構造
+class UserNotificationService:
+    """ユーザー通知サービス
+    
+    ユーザーへの通知送信を担当するサービスクラス。
+    """
+    
+    def __init__(self, email_client: EmailClient) -> None:
+        self._email_client = email_client
+        self._retry_count = 0
+    
+    def send_notification(self, user: User, message: str) -> bool:
+        """通知を送信する
+        
+        Args:
+            user: 通知対象ユーザー
+            message: 通知メッセージ
+            
+        Returns:
+            送信成功時True、失敗時False
+            
+        Raises:
+            ValidationError: ユーザーデータが無効な場合
+        """
+        if not user.email:
+            raise ValidationError('User email is required')
+        
+        return self._email_client.send(user.email, message)
+```
+
+### 7.2 デコレータの活用
+
+```python
+from functools import wraps, lru_cache
+import time
+
+# ✅ キャッシュデコレータ
+@lru_cache(maxsize=128)
+def expensive_calculation(n: int) -> int:
+    # 重い計算処理
+    return sum(i * i for i in range(n))
+
+# ✅ リトライデコレータ
+def retry(max_attempts: int = 3, delay: float = 1.0):
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_attempts):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    if attempt == max_attempts - 1:
+                        raise
+                    time.sleep(delay)
+            return None
+        return wrapper
+    return decorator
+
+@retry(max_attempts=3, delay=0.5)
+def unreliable_api_call() -> dict:
+    # 不安定なAPI呼び出し
+    pass
+```
+
+### 7.3 標準ライブラリの活用
+
+```python
+from collections import defaultdict, Counter, deque
+from itertools import groupby, chain
+from operator import attrgetter
+
+# ✅ collectionsモジュールの活用
+def group_users_by_role(users: List[User]) -> dict[str, List[User]]:
+    grouped = defaultdict(list)
+    for user in users:
+        grouped[user.role].append(user)
+    return dict(grouped)
+
+# ✅ itertoolsとoperatorの活用
+def get_top_users_by_role(users: List[User], limit: int = 5) -> List[User]:
+    sorted_users = sorted(users, key=attrgetter('created_at'), reverse=True)
+    return sorted_users[:limit]
+
+# ✅ 統計処理
+def analyze_user_roles(users: List[User]) -> dict[str, int]:
+    role_counter = Counter(user.role for user in users)
+    return dict(role_counter)
+```
+
+## 8. AI実装者向けの具体的指示
+
+### 8.1 Python特有の認知コスト管理
+
+**実装時の必須チェック**:
+1. 各関数の要素数が7以下か確認（変数、if文、関数呼び出し、データ構造の複雑さ）
+2. 30行を超える場合のみ分割検討
+3. 1〜2行だけのための関数作成は禁止
+4. リスト内包表記が複雑になりすぎていないかチェック
+
+### 8.2 Pythonらしい実装の優先順位
+
+1. **動くコードを書く**（完璧を求めない）
+2. **7つルールで認知コストをチェック**
+3. **Pythonic（Python的）な書き方を適用**
+4. **型ヒントと適切な例外処理を追加**
+5. **必要に応じてリファクタリング**
+
+### 8.3 具体的な禁止事項
+
+- ❌ 認知コスト無視の機械的な純粋関数化
+- ❌ 全関数への機械的なtry-except追加
+- ❌ 1〜2行のためだけの関数分割
+- ❌ 使われない型定義やクラスの量産
+- ❌ 過度に複雑なリスト内包表記やジェネレータ式
+
+### 8.4 推奨Pythonic実装パターン
+
+- ✅ 7つ以下の要素で構成された関数
+- ✅ 自然な純粋関数（無理な引数増加なし）
+- ✅ 重要な境界でのみ例外処理
+- ✅ 実用性を重視した型ヒント
+- ✅ デコレータ、コンテキストマネージャーの適切な活用
+- ✅ 標準ライブラリの積極的活用
+- ✅ async/awaitによる非同期処理
+- ✅ データクラスとプロトコルによる構造化
+
+## まとめ
+
+このガイドラインは**Pythonの特性を最大限活かした**コード規約です。
+
+- Python的な関数型プログラミング（リスト内包表記、ジェネレータ、高階関数）
+- 型ヒントによる安全性確保と認知コスト管理の両立
+- 例外処理とコンテキストマネージャーによる堅牢性
+- 非同期処理とモダンなPython機能の活用
+- 過剰な抽象化や分割による認知コスト増大を防止
+
+**「Pythonの哲学 × 関数型設計原則 × 認知コスト管理 = 実用的で高品質なPythonコード」**を目指します。

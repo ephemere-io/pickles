@@ -53,12 +53,34 @@ EMAIL_PORT=587
 ### 4. 実行
 
 ```bash
-# 手動実行
+# デフォルト実行（database_entries + comprehensive分析 + console出力）
 uv run python main.py
+
+# カスタマイズ実行
+uv run python main.py --source database_entries --analysis comprehensive --delivery console
+uv run python main.py --source recent_documents --analysis emotional --delivery file_html
+uv run python main.py --source database_entries --analysis productivity --delivery console,email_text
+uv run python main.py --days 14 --delivery email_html,file_text
+
+# 定期実行モード
+uv run python main.py --schedule
+
+# ヘルプ表示
+uv run python main.py --help
 
 # スケジューラー実行（毎週月曜7:00）
 # main.pyのスケジューラー部分のコメントアウトを解除してから実行
 ```
+
+#### 📝 コマンドライン引数
+
+| 引数          | 説明               | 選択肢                        | デフォルト |
+| ----------- | ---------------- | -------------------------- | ----- |
+| `--source`  | データソース         | `database_entries`, `recent_documents` | database_entries |
+| `--analysis` | 分析タイプ          | `comprehensive`, `emotional`, `productivity` | comprehensive |
+| `--delivery` | 配信方法           | `console`, `email_text`, `email_html`, `file_text`, `file_html` | console |
+| `--days`    | 取得日数          | 整数値                        | 7 |
+| `--schedule` | 定期実行モード       | フラグ                        | false |
 
 ## 📋 必要なAPI設定
 
@@ -123,11 +145,23 @@ uv python list
 
 ```
 pickles/
-├── main.py              # メインアプリケーション
-├── .env                 # 環境変数（要作成）
-├── pyproject.toml       # プロジェクト設定
-├── uv.lock              # 依存関係ロックファイル
-└── README.md            # このファイル
+├── main.py                    # メインアプリケーション・エントリーポイント
+├── inputs/
+│   ├── __init__.py           # Notion入力モジュール
+│   └── notion_input.py       # Notionデータ取得（統合クラス設計）
+├── throughput/
+│   ├── __init__.py           # 分析処理モジュール
+│   └── analyzer.py           # OpenAI感情・思考分析（統合クラス設計）
+├── outputs/
+│   ├── __init__.py           # 出力・配信モジュール
+│   └── report_generator.py   # レポート生成・メール送信（統合クラス設計）
+├── utils/
+│   ├── __init__.py           # ユーティリティ（定数管理含む）
+│   └── printer.py            # ログ・ヘルプ表示
+├── .env                      # 環境変数（要作成）
+├── pyproject.toml            # プロジェクト設定
+├── uv.lock                   # 依存関係ロックファイル
+└── README.md                 # このファイル
 ```
 
 ## 🔄 スケジューラー

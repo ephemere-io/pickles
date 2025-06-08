@@ -1,175 +1,190 @@
-import os
-import datetime
-from notion_client import Client
-from openai import OpenAI
+#!/usr/bin/env python3
+"""
+Pickles - Personal Insight Analytics System
+
+Input-Throughput-Output アーキテクチャによる
+日々の感情と思考の分析システム
+"""
+
+import sys
+from typing import List, Dict
+from functools import partial
 from apscheduler.schedulers.blocking import BlockingScheduler
-from email.mime.text import MIMEText
-import smtplib
-from dotenv import load_dotenv
-import pprint
 
-# 環境変数のロード
-load_dotenv()
+# 各コンポーネントのインポート
+from inputs import NotionInput, NotionInputError
+from throughput import DocumentAnalyzer, AnalysisError
+from outputs import ReportDelivery, OutputError
+from utils import Logger, UsagePrinter, CommandArgs, DataSources, AnalysisTypes, DeliveryMethods
 
-def fetch_entries():
-    """
-    Notionデータベースから過去1週間分の日誌エントリを取得する
-    DateプロパティとEntryプロパティを持つデータベースを想定
-    """
-    notion = Client(auth=os.getenv("NOTION_API_KEY"))
-    database_id = os.getenv("NOTION_PAGE_ID")
-    one_week_ago = (datetime.date.today() - datetime.timedelta(days=7)).isoformat()
-    one_month_ago = (datetime.date.today() - datetime.timedelta(days=30)).isoformat()
-    one_year_ago = (datetime.date.today() - datetime.timedelta(days=365)).isoformat()
 
-    # クエリで日付フィルタリング 
-    ### 06.05 memo: デフォルトでは100件上限のようだ。一年（365日）を取る場合、for文などで回す必要があるか。
-    response = notion.databases.query(
-        **{
-            "database_id": database_id,
-            "filter": {
-                "property": "Date",
-                # "date": {"on_or_after": one_week_ago}
-                "date": {"on_or_after": one_year_ago}
-            },
-            "sorts": [{"property": "Date", "direction": "ascending"}]
-        }
-    )
-
-    entries = []
-    results = response.get("results", [])
+class PicklesSystem:
+    """Picklesシステムメインクラス"""
     
-    # Debug: Print available properties for the first page
-    if results:
-        print("Available properties in the first page:")
-        for prop_name in results[0].get("properties", {}).keys():
-            print(f"- {prop_name}")
-    
-    for page in results:
-        properties = page.get("properties", {})
+    def __init__(self):
+        self._notion_input = NotionInput()
+        self._analyzer = DocumentAnalyzer()
+        self._delivery = ReportDelivery()
+        self._logger = Logger()
         
-        # Check if Date property exists and has the expected structure
-        if "Date" not in properties or not properties["Date"].get("date"):
-            print(f"Warning: Page {page.get('id')} missing Date property or unexpected format")
-            continue
+    def run_analysis(self, 
+                    data_source: str = "database_entries",
+                    analysis_type: str = "comprehensive",
+                    delivery_methods: List[str] = None,
+                    days: int = 7) -> Dict[str, str]:
+        """分析を実行してレポートを生成・配信"""
+        
+        if delivery_methods is None:
+            delivery_methods = ["console"]
+        
+        # バリデーション
+        valid_sources = {DataSources.DATABASE_ENTRIES, DataSources.RECENT_DOCUMENTS}
+        if data_source not in valid_sources:
+            return {"error": f"未対応のデータソース: {data_source}"}
+
+        try:
+            # データ取得
+            self._logger.log_start(data_source, days)
+            raw_data = self._fetch_data(data_source, days)
             
-        date = properties["Date"]["date"]["start"]
+            if not raw_data:
+                self._logger.log_no_data()
+                return {"error": "データが見つかりませんでした"}
+            
+            self._logger.log_data_fetched(len(raw_data))
+            
+            # 分析実行
+            self._logger.log_analysis_start(analysis_type)
+            analysis_result = self._analyzer.analyze_documents(
+                raw_data, 
+                analysis_type=analysis_type,
+                apply_filters=True
+            )
+            self._logger.log_analysis_complete(analysis_result['data_count'])
+            
+            # レポート配信
+            self._logger.log_delivery_start(delivery_methods)
+            delivery_results = self._delivery.deliver_report(
+                analysis_result,
+                delivery_methods=delivery_methods,
+                report_format="comprehensive"
+            )
+            self._logger.log_delivery_complete()
+            
+            return delivery_results
+            
+        except (NotionInputError, AnalysisError, OutputError) as e:
+            error_msg = str(e)
+            self._logger.log_error(error_msg)
+            return {"error": error_msg}
         
-        # Look for text content in either "Entry" or another rich_text property
-        content = ""
-        text_property_found = False
-        
-        # Try "Entry" first (the original expected property)
-        if "Entry" in properties and "rich_text" in properties["Entry"]:
-            texts = properties["Entry"]["rich_text"]
-            content = ''.join([rt.get("plain_text", "") for rt in texts])
-            text_property_found = True
-        else:
-            # If "Entry" not found, look for any property with rich_text type
-            for prop_name, prop_value in properties.items():
-                if prop_name != "Date" and "rich_text" in prop_value:
-                    print(f"Found alternative text property: {prop_name}")
-                    texts = prop_value["rich_text"]
-                    content = ''.join([rt.get("plain_text", "") for rt in texts])
-                    text_property_found = True
-                    break
-        
-        if text_property_found:
-            entries.append({"date": date, "text": content})
-        else:
-            print(f"Warning: No suitable text property found for page {page.get('id')}")
+        except Exception as e:
+            error_msg = f"予期しないエラー: {e}"
+            self._logger.log_error(error_msg)
+            return {"error": error_msg}
     
-    return entries
+    def _fetch_data(self, data_source: str, days: int) -> List[Dict[str, str]]:
+        """データ取得"""
+        if data_source == DataSources.DATABASE_ENTRIES:
+            return self._notion_input.fetch_database_entries(days)
+        elif data_source == DataSources.RECENT_DOCUMENTS:
+            return self._notion_input.fetch_recent_documents(days)
+        else:
+            raise ValueError(f"未対応のデータソース: {data_source}")
+    
+    def _parse_command_args(self, args: List[str]) -> Dict[str, any]:
+        """コマンドライン引数を解析"""
+        default_args = {
+            "source": DataSources.DATABASE_ENTRIES,
+            "analysis": AnalysisTypes.COMPREHENSIVE, 
+            "delivery": [DeliveryMethods.CONSOLE],
+            "days": 7,
+            "schedule": False
+        }
+        
+        parsed_args = default_args.copy()
+        i = 1
+        
+        while i < len(args):
+            arg = args[i]
+            
+            if arg == CommandArgs.HELP:
+                return {"help": True}
+            elif arg == CommandArgs.SOURCE and i + 1 < len(args):
+                parsed_args["source"] = args[i + 1]
+                i += 1
+            elif arg == CommandArgs.ANALYSIS and i + 1 < len(args):
+                parsed_args["analysis"] = args[i + 1]
+                i += 1
+            elif arg == CommandArgs.DELIVERY and i + 1 < len(args):
+                parsed_args["delivery"] = args[i + 1].split(",")
+                i += 1
+            elif arg == CommandArgs.DAYS and i + 1 < len(args):
+                parsed_args["days"] = int(args[i + 1])
+                i += 1
+            elif arg == CommandArgs.SCHEDULE:
+                parsed_args["schedule"] = True
+            
+            i += 1
+        
+        return parsed_args
+    
+    def schedule_job(self, 
+                    cron_day: str = "mon", 
+                    cron_hour: int = 7, 
+                    cron_minute: int = 0) -> None:
+        """定期実行をスケジュール"""
+        scheduler = BlockingScheduler(timezone="Asia/Tokyo")
+        
+        # デフォルト設定で週次実行
+        default_analysis = partial(
+            self.run_analysis,
+            data_source=DataSources.DATABASE_ENTRIES,
+            analysis_type=AnalysisTypes.COMPREHENSIVE,
+            delivery_methods=[DeliveryMethods.CONSOLE, DeliveryMethods.EMAIL_TEXT],
+            days=7
+        )
+        
+        scheduler.add_job(
+            default_analysis,
+            trigger="cron", 
+            day_of_week=cron_day, 
+            hour=cron_hour, 
+            minute=cron_minute
+        )
+        
+        self._logger.log_scheduler_start(cron_day, cron_hour, cron_minute)
+        scheduler.start()
 
 
-def analyze(entries):
-    """
-    OpenAI ChatGPT APIを使って感情・思考の分析レポートを生成する
-    """
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    # 日付と本文をまとめてプロンプト化
-    diary_text = "\n".join([f"{e['date']}: {e['text']}" for e in entries])
-    prompt = (
-        "次の日記を読み、この期間での筆者の心境の変化や、何に注目しているのか、本人も気づいていないような変化を抽出してください。"
-        "要約と感情の傾向を含むレポートを作成してください。\n" + diary_text
-    )
-
-    # resp = client.chat.completions.create(
-    #     model="o4-mini",
-    #     messages=[{"role": "user", "content": prompt}],
-    #     # temperature=0.7,
-    #     max_completion_tokens=1200
-    # )
-
-    resp = client.responses.create(
-        model="o4-mini",
-        reasoning={"effort": "high"},
-        input=[
-            {
-                "role": "user",
-                "content": str(prompt)
-            }
-        ],
-        max_output_tokens=3000
-    )
-
-    # print(type(resp))
-    # print(dir(resp))
-    # print(resp)
-    # print(resp.to_dict())
-
-    # return resp.message["content"]
-    # return resp.choices[0].message.content
-    # 辞書化して中身を確認
-    data = resp.to_dict()
-
-    # 「type":"message"」の要素を探す
-    message_block = next(
-        (item for item in data["output"] if item.get("type") == "message"),
-        None
-    )
-    if not message_block:
-        raise RuntimeError("アシスタント応答が見つかりませんでした。")
-
-    # content はリストになっているので、最初の要素の "text" キーを取得
-    return message_block["content"][0]["text"]
-
-
-def send_report(report: str):
-    """
-    SMTPを使ってレポートをメール送信する
-    """
-    msg = MIMEText(report, _charset="utf-8")
-    msg["Subject"] = "Pickles Weekly Report"
-    msg["From"] = os.getenv("EMAIL_USER")
-    msg["To"] = os.getenv("EMAIL_TO")
-
-    with smtplib.SMTP(os.getenv("EMAIL_HOST"), int(os.getenv("EMAIL_PORT"))) as server:
-        server.starttls()
-        server.login(os.getenv("EMAIL_USER"), os.getenv("EMAIL_PASS"))
-        server.send_message(msg)
-
-
-def job():
-    entries = fetch_entries()
-    if not entries:
-        print("No entries in the past week.")
-        return
-    report = analyze(entries)
-    print(report)
-    # send_report(report)
-    print("Weekly report sent.")
+def main() -> None:
+    """メイン関数"""
+    logger = Logger()
+    usage_printer = UsagePrinter()
+    system = PicklesSystem()
+    
+    logger.log_system_start()
+    
+    args = system._parse_command_args(sys.argv)
+    
+    if args.get("help"):
+        usage_printer.print_usage()
+        sys.exit(0)
+    
+    if args["schedule"]:
+        # スケジュール実行モード
+        system.schedule_job()
+    else:
+        # 即座に実行モード
+        results = system.run_analysis(
+            data_source=args["source"],
+            analysis_type=args["analysis"],
+            delivery_methods=args["delivery"],
+            days=args["days"]
+        )
+        
+        logger.log_results(results)
 
 
 if __name__ == "__main__":
-    # Asia/Tokyoタイムゾーンで毎週月曜7:00にジョブ実行
-    # scheduler = BlockingScheduler(timezone="Asia/Tokyo")
-    # scheduler.add_job(job, trigger="cron", day_of_week="mon", hour=7, minute=0)
-    # print("Scheduler started: Every Monday at 07:00 JST")
-    # scheduler.start()
-    entries = fetch_entries()
-    if not entries:
-        print("No entries in the past week.")
-    else:
-        report = analyze(entries)
-        print(report)
+    main()
