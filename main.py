@@ -96,7 +96,7 @@ class PicklesSystem:
         """コマンドライン引数を解析"""
         default_args = {
             "source": DataSources.DATABASE_ENTRIES,
-            "analysis": AnalysisTypes.COMPREHENSIVE, 
+            "analysis": AnalysisTypes.DOMI, 
             "delivery": [DeliveryMethods.CONSOLE],
             "days": 7,
             "schedule": False
@@ -140,7 +140,7 @@ class PicklesSystem:
         default_analysis = partial(
             self.run_analysis,
             data_source=DataSources.DATABASE_ENTRIES,
-            analysis_type=AnalysisTypes.COMPREHENSIVE,
+            analysis_type=AnalysisTypes.DOMI,
             delivery_methods=[DeliveryMethods.CONSOLE, DeliveryMethods.EMAIL_TEXT],
             days=7
         )

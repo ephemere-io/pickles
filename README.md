@@ -53,13 +53,13 @@ EMAIL_PORT=587
 ### 4. 実行
 
 ```bash
-# デフォルト実行（database_entries + comprehensive分析 + console出力）
+# デフォルト実行（database_entries + domi分析 + console出力）
 uv run python main.py
 
 # カスタマイズ実行
-uv run python main.py --source database_entries --analysis comprehensive --delivery console
-uv run python main.py --source recent_documents --analysis emotional --delivery file_html
-uv run python main.py --source database_entries --analysis productivity --delivery console,email_text
+uv run python main.py --source database_entries --analysis domi --delivery console
+uv run python main.py --source recent_documents --analysis aga --delivery file_html
+uv run python main.py --source database_entries --analysis domi --delivery console,email_text
 uv run python main.py --days 14 --delivery email_html,file_text
 
 # 定期実行モード
@@ -77,7 +77,7 @@ uv run python main.py --help
 | 引数          | 説明               | 選択肢                        | デフォルト |
 | ----------- | ---------------- | -------------------------- | ----- |
 | `--source`  | データソース         | `database_entries`, `recent_documents` | database_entries |
-| `--analysis` | 分析タイプ          | `comprehensive`, `emotional`, `productivity` | comprehensive |
+| `--analysis` | 分析タイプ          | `domi`, `aga` | domi |
 | `--delivery` | 配信方法           | `console`, `email_text`, `email_html`, `file_text`, `file_html` | console |
 | `--days`    | 取得日数          | 整数値                        | 7 |
 | `--schedule` | 定期実行モード       | フラグ                        | false |
