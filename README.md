@@ -58,7 +58,7 @@ uv run python main.py
 
 # カスタマイズ実行
 uv run python main.py --source database_entries --analysis domi --delivery console
-uv run python main.py --source recent_documents --analysis aga --delivery file_html
+uv run python main.py --source all --analysis aga --delivery file_html
 uv run python main.py --source database_entries --analysis domi --delivery console,email_text
 uv run python main.py --days 14 --delivery email_html,file_text
 
@@ -76,7 +76,7 @@ uv run python main.py --help
 
 | 引数          | 説明               | 選択肢                        | デフォルト |
 | ----------- | ---------------- | -------------------------- | ----- |
-| `--source`  | データソース         | `database_entries`, `recent_documents` | recent_documents |
+| `--source`  | データソース         | `database_entries`, `all` | all |
 | `--analysis` | 分析タイプ          | `domi`, `aga` | domi |
 | `--delivery` | 配信方法           | `console`, `email_text`, `email_html`, `file_text`, `file_html` | console |
 | `--days`    | 取得日数          | 整数値                        | 7 |

@@ -28,7 +28,7 @@ class PicklesSystem:
         self._logger = Logger()
         
     def run_analysis(self, 
-                    data_source: str = "recent_documents",
+                    data_source: str = "all",
                     analysis_type: str = "comprehensive",
                     delivery_methods: List[str] = None,
                     days: int = 7) -> Dict[str, str]:
@@ -38,7 +38,7 @@ class PicklesSystem:
             delivery_methods = ["console"]
         
         # バリデーション
-        valid_sources = {DataSources.DATABASE_ENTRIES, DataSources.RECENT_DOCUMENTS}
+        valid_sources = {DataSources.DATABASE_ENTRIES, DataSources.ALL}
         if data_source not in valid_sources:
             return {"error": f"未対応のデータソース: {data_source}"}
 
@@ -87,7 +87,7 @@ class PicklesSystem:
         """データ取得"""
         if data_source == DataSources.DATABASE_ENTRIES:
             return self._notion_input.fetch_database_entries(days)
-        elif data_source == DataSources.RECENT_DOCUMENTS:
+        elif data_source == DataSources.ALL:
             return self._notion_input.fetch_recent_documents(days)
         else:
             raise ValueError(f"未対応のデータソース: {data_source}")
@@ -95,7 +95,7 @@ class PicklesSystem:
     def _parse_command_args(self, args: List[str]) -> Dict[str, any]:
         """コマンドライン引数を解析"""
         default_args = {
-            "source": DataSources.RECENT_DOCUMENTS,
+            "source": DataSources.ALL,
             "analysis": AnalysisTypes.DOMI, 
             "delivery": [DeliveryMethods.CONSOLE],
             "days": 7,
@@ -139,7 +139,7 @@ class PicklesSystem:
         # デフォルト設定で週次実行
         default_analysis = partial(
             self.run_analysis,
-            data_source=DataSources.RECENT_DOCUMENTS,
+            data_source=DataSources.ALL,
             analysis_type=AnalysisTypes.DOMI,
             delivery_methods=[DeliveryMethods.CONSOLE, DeliveryMethods.EMAIL_TEXT],
             days=7
