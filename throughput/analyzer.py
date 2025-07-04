@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 
 # 定数をインポート
 from utils import AnalysisTypes
+# プロンプト管理クラスをインポート
+from .prompts import DomiPrompts, AgaPrompts
 
 load_dotenv()
 
@@ -22,7 +24,7 @@ class DocumentAnalyzer:
     
     def analyze_documents(self, 
                          raw_data: List[Dict[str, str]], 
-                         analysis_type: str = AnalysisTypes.COMPREHENSIVE,
+                         analysis_type: str = AnalysisTypes.DOMI,
                          apply_filters: bool = True) -> Dict[str, str]:
         """ドキュメントを総合的に分析"""
         
@@ -140,25 +142,13 @@ class DocumentAnalyzer:
     
     def _create_analysis_prompt(self, formatted_data: str, analysis_type: str) -> str:
         """分析タイプに応じたプロンプトを作成"""
-        base_prompt = f"以下のデータを分析してください：\n\n{formatted_data}\n\n"
-        
-        if analysis_type == AnalysisTypes.COMPREHENSIVE:
-            return base_prompt + (
-                "この期間の筆者の思考パターン、関心事、活動傾向を分析し、"
-                "本人も気づいていないような変化や傾向を抽出して、"
-                "詳細なレポートを作成してください。"
-            )
-        elif analysis_type == AnalysisTypes.EMOTIONAL:
-            return base_prompt + (
-                "この期間の筆者の感情の変化と心境を分析し、"
-                "ストレス要因や幸福度の変化を含む感情レポートを作成してください。"
-            )
-        elif analysis_type == AnalysisTypes.PRODUCTIVITY:
-            return base_prompt + (
-                "この期間の筆者の生産性とタスク管理状況を分析し、"
-                "効率化の提案を含む生産性レポートを作成してください。"
-            )
+        if analysis_type == AnalysisTypes.DOMI:
+            return DomiPrompts.create_prompt(formatted_data)
+        elif analysis_type == AnalysisTypes.AGA:
+            return AgaPrompts.create_prompt(formatted_data)
         else:
+            # フォールバック用の基本プロンプト
+            base_prompt = f"以下のデータを分析してください：\n\n{formatted_data}\n\n"
             return base_prompt + "このデータの特徴と傾向を分析してレポートを作成してください。"
 
 

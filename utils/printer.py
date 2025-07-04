@@ -16,9 +16,8 @@ DataSources = SimpleNamespace(
 )
 
 AnalysisTypes = SimpleNamespace(
-    COMPREHENSIVE="comprehensive",
-    EMOTIONAL="emotional",
-    PRODUCTIVITY="productivity"
+    DOMI="domi",
+    AGA="aga"
 )
 
 DeliveryMethods = SimpleNamespace(
@@ -43,7 +42,7 @@ class UsagePrinter:
 
 オプション:
   {CommandArgs.SOURCE}         データソース ({DataSources.DATABASE_ENTRIES} | {DataSources.RECENT_DOCUMENTS})
-  {CommandArgs.ANALYSIS}       分析タイプ ({AnalysisTypes.COMPREHENSIVE} | {AnalysisTypes.EMOTIONAL} | {AnalysisTypes.PRODUCTIVITY})
+  {CommandArgs.ANALYSIS}       分析タイプ ({AnalysisTypes.DOMI} | {AnalysisTypes.AGA})
   {CommandArgs.DELIVERY}       配信方法 ({DeliveryMethods.CONSOLE},{DeliveryMethods.EMAIL_TEXT},{DeliveryMethods.EMAIL_HTML},{DeliveryMethods.FILE_TEXT},{DeliveryMethods.FILE_HTML})
   {CommandArgs.DAYS}          取得日数 (デフォルト: 7)
   {CommandArgs.SCHEDULE}      定期実行モード
@@ -51,7 +50,7 @@ class UsagePrinter:
 
 例:
   python main.py                                                                # デフォルト: {DataSources.DATABASE_ENTRIES}
-  python main.py {CommandArgs.SOURCE} {DataSources.RECENT_DOCUMENTS} {CommandArgs.ANALYSIS} {AnalysisTypes.COMPREHENSIVE}
+  python main.py {CommandArgs.SOURCE} {DataSources.RECENT_DOCUMENTS} {CommandArgs.ANALYSIS} {AnalysisTypes.DOMI}
   python main.py {CommandArgs.DELIVERY} {DeliveryMethods.CONSOLE},{DeliveryMethods.FILE_HTML} {CommandArgs.DAYS} 14
   python main.py {CommandArgs.SCHEDULE}
         """
