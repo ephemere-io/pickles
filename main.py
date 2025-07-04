@@ -28,7 +28,7 @@ class PicklesSystem:
         self._logger = Logger()
         
     def run_analysis(self, 
-                    data_source: str = "database_entries",
+                    data_source: str = "recent_documents",
                     analysis_type: str = "comprehensive",
                     delivery_methods: List[str] = None,
                     days: int = 7) -> Dict[str, str]:
@@ -95,7 +95,7 @@ class PicklesSystem:
     def _parse_command_args(self, args: List[str]) -> Dict[str, any]:
         """コマンドライン引数を解析"""
         default_args = {
-            "source": DataSources.DATABASE_ENTRIES,
+            "source": DataSources.RECENT_DOCUMENTS,
             "analysis": AnalysisTypes.DOMI, 
             "delivery": [DeliveryMethods.CONSOLE],
             "days": 7,
@@ -139,7 +139,7 @@ class PicklesSystem:
         # デフォルト設定で週次実行
         default_analysis = partial(
             self.run_analysis,
-            data_source=DataSources.DATABASE_ENTRIES,
+            data_source=DataSources.RECENT_DOCUMENTS,
             analysis_type=AnalysisTypes.DOMI,
             delivery_methods=[DeliveryMethods.CONSOLE, DeliveryMethods.EMAIL_TEXT],
             days=7

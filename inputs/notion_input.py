@@ -56,7 +56,7 @@ class NotionInput:
         try:
             response = self._client.search(
                 filter={"value": "page", "property": "object"},
-                sort={"direction": "descending", "timestamp": "created_time"}
+                sort={"direction": "descending", "timestamp": "last_edited_time"}
             )
             
             pages = response.get("results", [])

@@ -53,7 +53,7 @@ EMAIL_PORT=587
 ### 4. 実行
 
 ```bash
-# デフォルト実行（database_entries + domi分析 + console出力）
+# デフォルト実行（all + comprehensive分析 + console出力）
 uv run python main.py
 
 # カスタマイズ実行
@@ -76,7 +76,7 @@ uv run python main.py --help
 
 | 引数          | 説明               | 選択肢                        | デフォルト |
 | ----------- | ---------------- | -------------------------- | ----- |
-| `--source`  | データソース         | `database_entries`, `recent_documents` | database_entries |
+| `--source`  | データソース         | `database_entries`, `recent_documents` | recent_documents |
 | `--analysis` | 分析タイプ          | `domi`, `aga` | domi |
 | `--delivery` | 配信方法           | `console`, `email_text`, `email_html`, `file_text`, `file_html` | console |
 | `--days`    | 取得日数          | 整数値                        | 7 |

@@ -49,8 +49,13 @@ class UsagePrinter:
   {CommandArgs.HELP}          このヘルプを表示
 
 例:
+<<<<<<< HEAD
   python main.py                                                                # デフォルト: {DataSources.DATABASE_ENTRIES}
   python main.py {CommandArgs.SOURCE} {DataSources.RECENT_DOCUMENTS} {CommandArgs.ANALYSIS} {AnalysisTypes.DOMI}
+=======
+  python main.py                                                                # デフォルト: {DataSources.RECENT_DOCUMENTS}
+  python main.py {CommandArgs.SOURCE} {DataSources.RECENT_DOCUMENTS} {CommandArgs.ANALYSIS} {AnalysisTypes.COMPREHENSIVE}
+>>>>>>> 5a55b1e (feat: デフォルトではnotionの全体から記事を持ってくるようにした)
   python main.py {CommandArgs.DELIVERY} {DeliveryMethods.CONSOLE},{DeliveryMethods.FILE_HTML} {CommandArgs.DAYS} 14
   python main.py {CommandArgs.SCHEDULE}
         """
