@@ -7,6 +7,7 @@ CommandArgs = SimpleNamespace(
     DELIVERY="--delivery",
     DAYS="--days",
     SCHEDULE="--schedule",
+    HISTORY="--history",
     HELP="--help"
 )
 
@@ -45,6 +46,7 @@ class UsagePrinter:
   {CommandArgs.ANALYSIS}       分析タイプ ({AnalysisTypes.DOMI} | {AnalysisTypes.AGA})
   {CommandArgs.DELIVERY}       配信方法 ({DeliveryMethods.CONSOLE},{DeliveryMethods.EMAIL_TEXT},{DeliveryMethods.EMAIL_HTML},{DeliveryMethods.FILE_TEXT},{DeliveryMethods.FILE_HTML})
   {CommandArgs.DAYS}          取得日数 (デフォルト: 7)
+  {CommandArgs.HISTORY}       分析履歴使用 (on | off, デフォルト: on)
   {CommandArgs.SCHEDULE}      定期実行モード
   {CommandArgs.HELP}          このヘルプを表示
 
@@ -53,6 +55,7 @@ class UsagePrinter:
   python main.py {CommandArgs.SOURCE} {DataSources.ALL} {CommandArgs.ANALYSIS} {AnalysisTypes.DOMI}
   python main.py {CommandArgs.SOURCE} {DataSources.DATABASE_ENTRIES} {CommandArgs.ANALYSIS} {AnalysisTypes.AGA}
   python main.py {CommandArgs.DELIVERY} {DeliveryMethods.CONSOLE},{DeliveryMethods.FILE_HTML} {CommandArgs.DAYS} 14
+  python main.py {CommandArgs.HISTORY} off                                      # 履歴なしで分析
   python main.py {CommandArgs.SCHEDULE}
         """
         print(usage) 
