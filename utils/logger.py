@@ -50,6 +50,48 @@ class Logger:
     @staticmethod
     def log_scheduler_start(cron_day: str, cron_hour: int, cron_minute: int) -> None:
         print(f"⏰ スケジューラー開始: 毎週{cron_day}曜日 {cron_hour:02d}:{cron_minute:02d} JST")
+    
+    # 汎用デバッグログメソッド
+    @staticmethod
+    def log_debug(message: str) -> None:
+        print(f"🔍 {message}")
+    
+    @staticmethod
+    def log_info(message: str) -> None:
+        print(f"ℹ️  {message}")
+    
+    @staticmethod
+    def log_warning(message: str) -> None:
+        print(f"⚠️  {message}")
+    
+    @staticmethod
+    def log_error_detail(message: str, details: Dict = None) -> None:
+        print(f"💥 {message}")
+        if details:
+            print(f"🔎 詳細: {details}")
+    
+    # AI分析関連の特化ログ
+    @staticmethod
+    def log_ai_request(message: str) -> None:
+        print(f"🤖 {message}")
+    
+    @staticmethod
+    def log_ai_response(message: str) -> None:
+        print(f"📨 {message}")
+    
+    @staticmethod
+    def log_ai_processing(message: str) -> None:
+        print(f"⚙️  {message}")
+    
+    @staticmethod
+    def log_ai_success(message: str) -> None:
+        print(f"🎉 {message}")
+    
+    @staticmethod
+    def log_ai_error(message: str, details: Dict = None) -> None:
+        print(f"🚨 {message}")
+        if details:
+            print(f"🔎 詳細: {details}")
 
 
  
