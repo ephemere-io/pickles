@@ -12,7 +12,7 @@ CommandArgs = SimpleNamespace(
 
 DataSources = SimpleNamespace(
     DATABASE_ENTRIES="database_entries",
-    RECENT_DOCUMENTS="recent_documents"
+    ALL="all"
 )
 
 AnalysisTypes = SimpleNamespace(
@@ -41,7 +41,7 @@ class UsagePrinter:
   python main.py [オプション]
 
 オプション:
-  {CommandArgs.SOURCE}         データソース ({DataSources.DATABASE_ENTRIES} | {DataSources.RECENT_DOCUMENTS})
+  {CommandArgs.SOURCE}         データソース ({DataSources.DATABASE_ENTRIES} | {DataSources.ALL})
   {CommandArgs.ANALYSIS}       分析タイプ ({AnalysisTypes.DOMI} | {AnalysisTypes.AGA})
   {CommandArgs.DELIVERY}       配信方法 ({DeliveryMethods.CONSOLE},{DeliveryMethods.EMAIL_TEXT},{DeliveryMethods.EMAIL_HTML},{DeliveryMethods.FILE_TEXT},{DeliveryMethods.FILE_HTML})
   {CommandArgs.DAYS}          取得日数 (デフォルト: 7)
@@ -49,8 +49,9 @@ class UsagePrinter:
   {CommandArgs.HELP}          このヘルプを表示
 
 例:
-  python main.py                                                                # デフォルト: {DataSources.DATABASE_ENTRIES}
-  python main.py {CommandArgs.SOURCE} {DataSources.RECENT_DOCUMENTS} {CommandArgs.ANALYSIS} {AnalysisTypes.DOMI}
+  python main.py                                                                # デフォルト: {DataSources.ALL}
+  python main.py {CommandArgs.SOURCE} {DataSources.ALL} {CommandArgs.ANALYSIS} {AnalysisTypes.DOMI}
+  python main.py {CommandArgs.SOURCE} {DataSources.DATABASE_ENTRIES} {CommandArgs.ANALYSIS} {AnalysisTypes.AGA}
   python main.py {CommandArgs.DELIVERY} {DeliveryMethods.CONSOLE},{DeliveryMethods.FILE_HTML} {CommandArgs.DAYS} 14
   python main.py {CommandArgs.SCHEDULE}
         """
