@@ -1,5 +1,6 @@
 import os
 import datetime
+import html
 from typing import Dict, List, Optional
 from email.mime.text import MIMEText
 import smtplib
@@ -103,6 +104,10 @@ class ReportDelivery:
         """HTML形式のレポートをフォーマット"""
         current_date = datetime.datetime.now().strftime("%Y年%m月%d日")
         
+        # HTMLエスケープ処理
+        statistics = html.escape(analysis_result.get("statistics", "統計情報なし"))
+        insights = html.escape(analysis_result.get("insights", "分析結果なし"))
+        
         return f"""
         <html>
         <head>
@@ -126,14 +131,14 @@ class ReportDelivery:
             <div class="section">
                 <h2>📈 データ統計</h2>
                 <div class="stats">
-                    <pre>{analysis_result.get("statistics", "統計情報なし")}</pre>
+                    <pre>{statistics}</pre>
                 </div>
             </div>
             
             <div class="section">
                 <h2>🧠 AI分析インサイト</h2>
                 <div class="insights">
-                    <pre>{analysis_result.get("insights", "分析結果なし")}</pre>
+                    <pre>{insights}</pre>
                 </div>
             </div>
             

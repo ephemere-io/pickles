@@ -101,7 +101,7 @@ class DocumentAnalyzer:
                 model="o4-mini",
                 reasoning={"effort": "high"},
                 input=[{"role": "user", "content": prompt}],
-                max_output_tokens=3000
+                max_output_tokens=50000
             )
             
             data_dict = resp.to_dict()
