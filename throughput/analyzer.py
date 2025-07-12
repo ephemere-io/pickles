@@ -28,9 +28,10 @@ class DocumentAnalyzer:
                          apply_filters: bool = True) -> Dict[str, str]:
         """ドキュメントを総合的に分析"""
         
-        # フィルタリング
-        filtered_data = self._filter_data(raw_data) if apply_filters else raw_data
-        
+        # フィルタリングは一旦無効化
+        # filtered_data = self._filter_data(raw_data) if apply_filters else raw_data
+        filtered_data = raw_data
+
         # 統計情報生成
         stats = self._generate_statistics(raw_data, filtered_data)
         
