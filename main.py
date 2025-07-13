@@ -21,9 +21,9 @@ from utils import Logger, UsagePrinter, CommandArgs, DataSources, AnalysisTypes,
 class PicklesSystem:
     """Picklesシステムメインクラス"""
     
-    def __init__(self):
+    def __init__(self, enable_history: bool = True):
         self._notion_input = NotionInput()
-        self._analyzer = DocumentAnalyzer()
+        self._analyzer = DocumentAnalyzer(enable_history=enable_history)
         self._delivery = ReportDelivery()
         self._logger = Logger()
         
@@ -99,6 +99,7 @@ class PicklesSystem:
             "analysis": AnalysisTypes.DOMI, 
             "delivery": [DeliveryMethods.CONSOLE],
             "days": 7,
+            "history": True,
             "schedule": False
         }
         
@@ -121,6 +122,9 @@ class PicklesSystem:
                 i += 1
             elif arg == CommandArgs.DAYS and i + 1 < len(args):
                 parsed_args["days"] = int(args[i + 1])
+                i += 1
+            elif arg == CommandArgs.HISTORY and i + 1 < len(args):
+                parsed_args["history"] = args[i + 1].lower() == "on"
                 i += 1
             elif arg == CommandArgs.SCHEDULE:
                 parsed_args["schedule"] = True
@@ -161,15 +165,23 @@ def main() -> None:
     """メイン関数"""
     logger = Logger()
     usage_printer = UsagePrinter()
-    system = PicklesSystem()
     
-    logger.log_system_start()
-    
-    args = system._parse_command_args(sys.argv)
+    # 引数を事前に解析して履歴設定を取得
+    temp_system = PicklesSystem()  # 一時的なインスタンス
+    args = temp_system._parse_command_args(sys.argv)
     
     if args.get("help"):
         usage_printer.print_usage()
         sys.exit(0)
+    
+    # 履歴設定でシステムを初期化
+    system = PicklesSystem(enable_history=args["history"])
+    
+    logger.log_system_start()
+    if args["history"]:
+        logger.log_info("分析履歴機能: 有効")
+    else:
+        logger.log_info("分析履歴機能: 無効")
     
     if args["schedule"]:
         # スケジュール実行モード

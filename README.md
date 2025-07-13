@@ -62,6 +62,10 @@ uv run python main.py --source all --analysis aga --delivery file_html
 uv run python main.py --source database_entries --analysis domi --delivery console,email_text
 uv run python main.py --days 14 --delivery email_html,file_text
 
+# 履歴機能の使用例
+uv run python main.py --history on --delivery email_html    # 過去の分析を参考にした継続的分析（デフォルト）
+uv run python main.py --history off --delivery console     # 履歴なしの独立分析
+
 # 定期実行モード
 uv run python main.py --schedule
 
@@ -80,7 +84,34 @@ uv run python main.py --help
 | `--analysis` | 分析タイプ          | `domi`, `aga` | domi |
 | `--delivery` | 配信方法           | `console`, `email_text`, `email_html`, `file_text`, `file_html` | console |
 | `--days`    | 取得日数          | 整数値                        | 7 |
+| `--history` | 分析履歴使用       | `on`, `off`                  | on |
 | `--schedule` | 定期実行モード       | フラグ                        | false |
+
+## 🧠 AI分析履歴機能
+
+Picklesは**OpenAI o4-miniのResponses API履歴機能**を活用し、過去の分析結果を踏まえた継続的な洞察を提供します。
+
+### 機能概要
+- **継続的コンテキスト**: 過去3回分の分析履歴をAIに送信
+- **パターン認識**: 時系列での変化や傾向の発見
+- **個人最適化**: ユーザー固有のパターンに特化した分析
+
+### 履歴データ管理
+- **保存場所**: プロジェクトルートの`analysis_history.json`
+- **最大履歴数**: 10件（自動削除）
+- **分析タイプ別**: `domi`と`aga`で独立管理
+
+### 使用例
+```bash
+# 履歴ありで継続的分析（推奨）
+uv run python main.py --history on
+
+# 従来通りの独立分析
+uv run python main.py --history off
+
+# 特定分析タイプで履歴活用
+uv run python main.py --analysis domi --history on
+```
 
 ## 📋 必要なAPI設定
 
@@ -151,14 +182,21 @@ pickles/
 │   └── notion_input.py       # Notionデータ取得（統合クラス設計）
 ├── throughput/
 │   ├── __init__.py           # 分析処理モジュール
-│   └── analyzer.py           # OpenAI感情・思考分析（統合クラス設計）
+│   ├── analyzer.py           # OpenAI感情・思考分析（統合クラス設計）
+│   ├── analysis_history.py   # AI分析履歴管理
+│   └── prompts/              # 分析プロンプト管理
+│       ├── __init__.py
+│       ├── domi_prompts.py
+│       └── aga_prompts.py
 ├── outputs/
 │   ├── __init__.py           # 出力・配信モジュール
 │   └── report_generator.py   # レポート生成・メール送信（統合クラス設計）
 ├── utils/
 │   ├── __init__.py           # ユーティリティ（定数管理含む）
-│   └── printer.py            # ログ・ヘルプ表示
+│   ├── logger.py             # ログ出力（絵文字付き）
+│   └── printer.py            # ヘルプ表示・定数定義
 ├── .env                      # 環境変数（要作成）
+├── analysis_history.json     # AI分析履歴データ（自動生成）
 ├── pyproject.toml            # プロジェクト設定
 ├── uv.lock                   # 依存関係ロックファイル
 └── README.md                 # このファイル
