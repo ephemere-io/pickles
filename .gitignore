@@ -39,3 +39,6 @@ env/
 
 .DS_Store
 .pickles
+
+# Analysis files
+analysis_history.json
