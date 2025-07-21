@@ -18,39 +18,9 @@ class NotionInput:
     def __init__(self):
         self._client = Client(auth=os.getenv("NOTION_API_KEY"))
     
-    def fetch_database_entries(self, days: int = 7) -> List[Dict[str, str]]:
-        """データベースから日誌エントリを取得"""
-        database_id = os.getenv("NOTION_PAGE_ID")
-        if not database_id:
-            raise NotionInputError("NOTION_PAGE_IDが設定されていません")
-        
-        cutoff_date = self._calculate_cutoff_date(days)
-        
-        try:
-            response = self._client.databases.query(
-                database_id=database_id,
-                filter={
-                    "property": "Date",
-                    "date": {"on_or_after": cutoff_date}
-                },
-                sorts=[{"property": "Date", "direction": "ascending"}]
-            )
-            
-            pages = response.get("results", [])
-            entries = []
-            
-            for page in pages:
-                entry = self._extract_database_entry(page)
-                if entry:
-                    entries.append(entry)
-            
-            return entries
-            
-        except Exception as e:
-            raise NotionInputError(f"データベース取得エラー: {e}")
     
-    def fetch_recent_documents(self, days: int = 7) -> List[Dict[str, str]]:
-        """最近作成された全ドキュメントを取得"""
+    def fetch_notion_documents(self, days: int = 7) -> List[Dict[str, str]]:
+        """Notionから最近のドキュメントを取得"""
         cutoff_date = self._calculate_cutoff_date(days)
         
         try:
@@ -73,30 +43,15 @@ class NotionInput:
         except Exception as e:
             raise NotionInputError(f"検索エラー: {e}")
     
-    def _extract_database_entry(self, page: dict) -> Optional[Dict[str, str]]:
-        """データベースページからエントリデータを抽出"""
+    def _extract_date_property(self, page: dict) -> Optional[str]:
+        """ページから日付プロパティを抽出"""
         properties = page.get("properties", {})
         
         # 日付プロパティをチェック
-        if "Date" not in properties or not properties["Date"].get("date"):
-            return None
+        if "Date" in properties and properties["Date"].get("date"):
+            return properties["Date"]["date"]["start"]
         
-        date = properties["Date"]["date"]["start"]
-        
-        # エントリテキストを探す
-        content = ""
-        if "Entry" in properties and "rich_text" in properties["Entry"]:
-            texts = properties["Entry"]["rich_text"]
-            content = ''.join([rt.get("plain_text", "") for rt in texts])
-        else:
-            # 他のリッチテキストプロパティを探す
-            for name, prop in properties.items():
-                if name != "Date" and "rich_text" in prop:
-                    texts = prop["rich_text"]
-                    content = ''.join([rt.get("plain_text", "") for rt in texts])
-                    break
-        
-        return {"date": date, "text": content} if content else None
+        return None
     
     def _extract_document_info(self, page: dict) -> Optional[Dict[str, str]]:
         """ページから文書情報を抽出"""
@@ -107,8 +62,11 @@ class NotionInput:
         title = self._extract_page_title(page)
         content = self._get_page_content(page_id)
         
+        # データベースエントリの場合は日付プロパティを優先
+        date = self._extract_date_property(page) or page.get("created_time", "")[:10]
+        
         return {
-            "date": page.get("created_time", "")[:10],
+            "date": date,
             "title": title,
             "text": content
         }
