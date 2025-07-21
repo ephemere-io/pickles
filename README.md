@@ -37,7 +37,6 @@ uv sync
 ```bash
 # Notion API設定
 NOTION_API_KEY=your_notion_api_key_here
-NOTION_PAGE_ID=your_notion_database_id_here
 
 # OpenAI API設定
 OPENAI_API_KEY=your_openai_api_key_here
@@ -53,13 +52,13 @@ EMAIL_PORT=587
 ### 4. 実行
 
 ```bash
-# デフォルト実行（all + comprehensive分析 + console出力）
+# デフォルト実行（notion + domi分析 + console出力）
 uv run python main.py
 
 # カスタマイズ実行
-uv run python main.py --source database_entries --analysis domi --delivery console
-uv run python main.py --source all --analysis aga --delivery file_html
-uv run python main.py --source database_entries --analysis domi --delivery console,email_text
+uv run python main.py --source notion --analysis domi --delivery console
+uv run python main.py --source notion --analysis aga --delivery file_html
+uv run python main.py --source notion --analysis domi --delivery console,email_text
 uv run python main.py --days 14 --delivery email_html,file_text
 
 # 履歴機能の使用例
@@ -80,7 +79,7 @@ uv run python main.py --help
 
 | 引数          | 説明               | 選択肢                        | デフォルト |
 | ----------- | ---------------- | -------------------------- | ----- |
-| `--source`  | データソース         | `database_entries`, `all` | all |
+| `--source`  | データソース         | `notion` | notion |
 | `--analysis` | 分析タイプ          | `domi`, `aga` | domi |
 | `--delivery` | 配信方法           | `console`, `email_text`, `email_html`, `file_text`, `file_html` | console |
 | `--days`    | 取得日数          | 整数値                        | 7 |
@@ -120,12 +119,10 @@ uv run python main.py --analysis domi --history on
 
 1. [Notion Developers](https://developers.notion.com/)でintegrationを作成
 2. APIキーを取得して`NOTION_API_KEY`に設定
-3. 日記データベースをintegrationに共有
-4. データベースIDを`NOTION_PAGE_ID`に設定
+3. 分析したいワークスペースまたはデータベースをintegrationに共有
 
-**必要なデータベース構造:**
-- `Date`プロパティ（日付型）
-- `Entry`プロパティ（リッチテキスト型）
+**データベースを使用する場合の推奨構造:**
+- `Date`プロパティ（日付型） - 作成日以外の日付を使用したい場合
 
 </details>
 

@@ -42,3 +42,7 @@ env/
 
 # Analysis files
 analysis_history.json
+
+# Report output files
+pickles_report_*.txt
+pickles_report_*.html
