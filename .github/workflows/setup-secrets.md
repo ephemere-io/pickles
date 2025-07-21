@@ -33,10 +33,6 @@ Settings → Secrets and variables → Actions から以下のシークレット
 - **NOTION_API_KEY**: Notion Integration Token
   - [Notion Developers](https://www.notion.so/my-integrations) でIntegrationを作成
   - "Internal Integration Token"をコピー
-  
-- **NOTION_PAGE_ID**: 分析対象のNotionページID
-  - NotionでページのURLからID部分をコピー
-  - 例: `https://notion.so/xxxxx` の `xxxxx` 部分
 
 ### OpenAI API設定
 - **OPENAI_API_KEY**: OpenAI APIキー
