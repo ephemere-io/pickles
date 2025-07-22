@@ -20,28 +20,109 @@ class NotionInput:
     
     
     def fetch_notion_documents(self, days: int = 7) -> List[Dict[str, str]]:
-        """Notionから最近のドキュメントを取得"""
+        """Notionから最近のドキュメントを取得（データベース優先、フォールバック付き）"""
         cutoff_date = self._calculate_cutoff_date(days)
         
         try:
-            response = self._client.search(
-                filter={"value": "page", "property": "object"},
-                sort={"direction": "descending", "timestamp": "last_edited_time"}
+            # まずデータベースからの取得を試行
+            database_entries = self._try_fetch_database_entries(cutoff_date)
+            if database_entries:
+                return database_entries
+            
+            # データベースが見つからない場合は通常の検索を実行
+            return self._fetch_page_search_results(cutoff_date)
+            
+        except Exception as e:
+            raise NotionInputError(f"データ取得エラー: {e}")
+    
+    def _try_fetch_database_entries(self, cutoff_date: str) -> List[Dict[str, str]]:
+        """データベースからエントリ取得を試行"""
+        try:
+            # 利用可能なデータベースを検索
+            search_response = self._client.search(
+                filter={"value": "database", "property": "object"}
+            )
+            
+            databases = search_response.get("results", [])
+            if not databases:
+                return []
+            
+            # 最初に見つかったデータベースからエントリを取得
+            database_id = databases[0].get("id")
+            if not database_id:
+                return []
+            
+            # データベースからエントリを取得
+            return self._fetch_database_entries(database_id, cutoff_date)
+            
+        except Exception:
+            return []  # データベースアクセスに失敗した場合は空リストを返す
+    
+    def _fetch_database_entries(self, database_id: str, cutoff_date: str) -> List[Dict[str, str]]:
+        """指定されたデータベースからエントリを取得"""
+        try:
+            response = self._client.databases.query(
+                database_id=database_id,
+                filter={
+                    "property": "Date",
+                    "date": {"on_or_after": cutoff_date}
+                },
+                sorts=[{"property": "Date", "direction": "ascending"}]
             )
             
             pages = response.get("results", [])
-            documents = []
+            entries = []
+            
+            for page in pages:
+                entry = self._extract_database_entry(page)
+                if entry:
+                    entries.append(entry)
+            
+            return entries
+            
+        except Exception:
+            # Dateプロパティがない場合は、作成日でフィルタリング
+            return self._fetch_database_entries_by_created_time(database_id, cutoff_date)
+    
+    def _fetch_database_entries_by_created_time(self, database_id: str, cutoff_date: str) -> List[Dict[str, str]]:
+        """作成日でデータベースエントリを取得（Dateプロパティがない場合の代替）"""
+        try:
+            response = self._client.databases.query(
+                database_id=database_id,
+                sorts=[{"property": "Created time", "direction": "ascending"}]
+            )
+            
+            pages = response.get("results", [])
+            entries = []
             
             for page in pages:
                 if self._is_recent_page(page, cutoff_date):
-                    doc = self._extract_document_info(page)
-                    if doc:
-                        documents.append(doc)
+                    entry = self._extract_database_entry(page)
+                    if entry:
+                        entries.append(entry)
             
-            return documents
+            return entries
             
-        except Exception as e:
-            raise NotionInputError(f"検索エラー: {e}")
+        except Exception:
+            return []
+    
+    def _fetch_page_search_results(self, cutoff_date: str) -> List[Dict[str, str]]:
+        """通常のページ検索結果を取得"""
+        response = self._client.search(
+            filter={"value": "page", "property": "object"},
+            sort={"direction": "descending", "timestamp": "last_edited_time"}
+        )
+        
+        pages = response.get("results", [])
+        documents = []
+        
+        for page in pages:
+            if self._is_recent_page(page, cutoff_date):
+                doc = self._extract_document_info(page)
+                if doc:
+                    documents.append(doc)
+        
+        return documents
     
     def _extract_date_property(self, page: dict) -> Optional[str]:
         """ページから日付プロパティを抽出"""
@@ -63,6 +144,24 @@ class NotionInput:
         content = self._get_page_content(page_id)
         
         # データベースエントリの場合は日付プロパティを優先
+        date = self._extract_date_property(page) or page.get("created_time", "")[:10]
+        
+        return {
+            "date": date,
+            "title": title,
+            "text": content
+        }
+    
+    def _extract_database_entry(self, page: dict) -> Optional[Dict[str, str]]:
+        """データベースページからエントリを抽出"""
+        page_id = page.get("id", "")
+        if not page_id:
+            return None
+        
+        title = self._extract_page_title(page)
+        content = self._get_page_content(page_id)
+        
+        # データベースエントリの日付プロパティを優先的に取得
         date = self._extract_date_property(page) or page.get("created_time", "")[:10]
         
         return {
