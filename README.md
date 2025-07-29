@@ -86,9 +86,133 @@ uv run python main.py --help
 | `--history` | 分析履歴使用       | `on`, `off`                  | on |
 | `--schedule` | 定期実行モード       | フラグ                        | false |
 
+## 🔍 Notion分析処理の詳細フロー（2025/07/29時点）
+
+Picklesがどのようにデータを取得・分析しているかを詳しく説明します。
+
+### 処理の流れ（実行順序）
+
+#### 1. **プログラム起動**（`main.py`）
+```
+uv run python main.py --analysis domi --delivery console
+```
+- コマンドライン引数を解析
+- `PicklesSystem`クラスをインスタンス化
+- `run_analysis()`メソッドを実行
+
+#### 2. **データ取得フェーズ**（`inputs/notion_input.py`）
+
+##### **2-0. API接続確認**（初期化時）
+- ユーザー情報取得でAPIキー有効性を確認
+- サンプル検索でアクセス権限を確認
+
+`NotionInput.fetch_notion_documents(days=7)`が実行され、以下の優先順位でデータを取得：
+
+1. **データベース検索を試行**
+   - Notion APIで利用可能なデータベースを検索
+   - 見つかった場合、最初のデータベースにアクセス
+   
+2. **データベースからエントリ取得**（データベースが見つかった場合）
+   - `Date`プロパティでフィルタリング（過去7日分）
+   - 失敗した場合は`Created time`でフィルタリング
+   - 各エントリから以下を抽出：
+     - **タイトル**: タイトルプロパティから
+     - **日付**: Dateプロパティまたは作成日時
+     - **コンテンツ**: 
+       - データベースのプロパティ（rich_text, select, multi_select, url, email, phone_number, number, checkbox）
+       - ページ本体のブロック（paragraph, heading_1-3, lists, quote, callout, code, toggle, table_row, bookmark, link_preview）
+
+3. **通常のページ検索**（データベースが見つからない場合）
+   - 最近編集されたページを検索（ページネーション対応）
+   - 大規模ワークスペース対応（最大100件ずつ取得）
+   - 各ページから同様にタイトル、日付、コンテンツを抽出
+
+#### 3. **分析処理フェーズ**（`throughput/analyzer.py`）
+`DocumentAnalyzer.analyze_documents(raw_data, analysis_type="domi")`が実行：
+
+1. **データの前処理**
+   - 取得したデータをそのまま使用（フィルタリングは無効化）
+   - データを分析用フォーマットに整形
+
+2. **分析履歴の取得**（`--history on`の場合）
+   - `analysis_history.json`から過去3回分の分析を読み込み
+   - 分析タイプ（domi/aga）別に履歴を管理
+
+3. **プロンプト生成**
+   - **domi分析**（`throughput/prompts/domi_prompts.py`）: 
+     - 「ゆらぎ」「ゆだね」「ゆとり」の観点から分析
+     - コード化・概念抽出・手紙形式での振り返り
+   - **aga分析**（`throughput/prompts/aga_prompts.py`）:
+     - より詩的で抽象的な分析アプローチ
+
+4. **OpenAI API呼び出し**
+   - モデル: `o1-mini`
+   - 最大トークン数: 50,000
+   - 分析履歴を含めてリクエスト送信
+
+5. **結果の保存**
+   - 分析結果を`analysis_history.json`に追加
+   - 最新10件のみ保持（古い履歴は自動削除）
+
+#### 4. **レポート生成・配信フェーズ**（`outputs/report_generator.py`）
+`ReportDelivery.deliver_report(analysis_results, delivery_methods=["console"])`が実行：
+
+1. **レポート生成**
+   - データ統計（件数、平均文字数）を計算
+   - AI分析結果を整形
+   - 日付・時刻を付加
+
+2. **配信方法別の処理**
+   - **console**: ターミナルに表示
+   - **email_text/email_html**: メールで送信
+   - **file_text/file_html**: ファイルに保存
+
+### 実際に分析される内容
+
+#### Notionデータベースの場合
+- **プロパティ情報**: rich_text, select, multi_select, url, email, phone_number, number, checkbox プロパティ
+- **ページコンテンツ**: 各エントリのページ本体に書かれた内容
+- **メタデータ**: 作成日時、タイトル
+
+#### 通常のNotionページの場合
+- **ページタイトル**
+- **ページ本文**: paragraph, heading_1-3, lists, quote, callout, code, toggle, table_row, bookmark, link_preview ブロック
+- **作成日時・編集日時**
+
+### デバッグ情報
+実行時に以下のようなデバッグ情報が表示されます：
+
+#### API接続・権限確認
+```
+✅ Notion API接続成功: [ユーザー名]
+📊 アクセス可能なページ数（サンプル）: 5+
+```
+
+#### データベース検索
+```
+🗄️  データベースを検索中...
+📊 3個のデータベースが見つかりました
+📂 データベース 'Daily Notes' (ID: abcd1234...) を使用
+```
+
+#### ページ検索（フォールバック時）
+```
+🔎 ページ検索を実行中...
+📄 取得済み: 100件 (has_more: true)
+📑 検索で合計145件のページが見つかりました
+```
+
+#### コンテンツ抽出
+```
+📋 プロパティから5項目のコンテンツを抽出
+✅ ページ abcd1234... のコンテンツを取得（256文字）
+⚠️  データベースエントリ efgh5678... のコンテンツが空です
+📅 日付フィルタ: 作成2025-07-15, 編集2025-07-16 < 2025-07-22 (除外)
+```
+
 ## 🧠 AI分析履歴機能
 
-Picklesは**OpenAI o4-miniのResponses API履歴機能**を活用し、過去の分析結果を踏まえた継続的な洞察を提供します。
+Picklesは**OpenAI o1-miniのResponses API履歴機能**を活用し、過去の分析結果を踏まえた継続的な洞察を提供します。
 
 ### 機能概要
 - **継続的コンテキスト**: 過去3回分の分析履歴をAIに送信
