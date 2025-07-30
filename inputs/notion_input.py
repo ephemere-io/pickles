@@ -17,6 +17,13 @@ class NotionInput:
     
     def __init__(self, api_key: str = None):
         self._api_key = api_key or os.getenv("NOTION_API_KEY")
+        
+        # デバッグ: APIキーの状態を確認
+        if self._api_key:
+            print(f"🔑 NotionInput: APIキー設定済み ({self._api_key[:4]}...{self._api_key[-4:]} - {len(self._api_key)}文字)")
+        else:
+            print("⚠️ NotionInput: APIキーが設定されていません")
+        
         self._client = Client(auth=self._api_key)
         self._check_api_connection()
     
