@@ -179,14 +179,67 @@ class PicklesSystem:
         scheduler.start()
 
 
+def parse_command_args(args: List[str]) -> Dict[str, any]:
+    """コマンドライン引数を解析（スタンドアロン関数）"""
+    default_args = {
+        "source": DataSources.NOTION,
+        "analysis": AnalysisTypes.DOMI, 
+        "delivery": [DeliveryMethods.CONSOLE],
+        "days": 7,
+        "history": True,
+        "schedule": False,
+        "user_name": None,
+        "email_to": None,
+        "notion_api_key": None
+    }
+    
+    parsed_args = default_args.copy()
+    i = 1
+    
+    while i < len(args):
+        arg = args[i]
+        
+        if arg == CommandArgs.HELP:
+            return {"help": True}
+        elif arg == CommandArgs.SOURCE and i + 1 < len(args):
+            parsed_args["source"] = args[i + 1]
+            i += 1
+        elif arg == CommandArgs.ANALYSIS and i + 1 < len(args):
+            parsed_args["analysis"] = args[i + 1]
+            i += 1
+        elif arg == CommandArgs.DELIVERY and i + 1 < len(args):
+            parsed_args["delivery"] = args[i + 1].split(",")
+            i += 1
+        elif arg == CommandArgs.DAYS and i + 1 < len(args):
+            parsed_args["days"] = int(args[i + 1])
+            i += 1
+        elif arg == CommandArgs.HISTORY and i + 1 < len(args):
+            parsed_args["history"] = args[i + 1].lower() == "on"
+            i += 1
+        elif arg == CommandArgs.SCHEDULE:
+            parsed_args["schedule"] = True
+        elif arg == CommandArgs.USER_NAME and i + 1 < len(args):
+            parsed_args["user_name"] = args[i + 1]
+            i += 1
+        elif arg == CommandArgs.EMAIL_TO and i + 1 < len(args):
+            parsed_args["email_to"] = args[i + 1]
+            i += 1
+        elif arg == CommandArgs.NOTION_API_KEY and i + 1 < len(args):
+            parsed_args["notion_api_key"] = args[i + 1]
+            i += 1
+        
+        i += 1
+    
+    return parsed_args
+
+
 def main() -> None:
     """メイン関数"""
     logger = Logger()
     usage_printer = UsagePrinter()
     
-    # 引数を事前に解析して履歴設定を取得
-    temp_system = PicklesSystem()  # 一時的なインスタンス
-    args = temp_system._parse_command_args(sys.argv)
+    # 引数を解析（PicklesSystemインスタンスを作らずに直接解析）
+    args = parse_command_args(sys.argv)
     
     if args.get("help"):
         usage_printer.print_usage()
