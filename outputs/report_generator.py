@@ -20,13 +20,23 @@ class OutputError(Exception):
 class ReportDelivery:
     """レポート配信統合クラス"""
     
-    def __init__(self):
-        # メール設定
-        self.smtp_host = os.getenv("EMAIL_HOST")
-        self.smtp_port = int(os.getenv("EMAIL_PORT", "587"))
-        self.username = os.getenv("EMAIL_USER")
-        self.password = os.getenv("EMAIL_PASS")
-        self.to_email = os.getenv("EMAIL_TO")
+    def __init__(self, email_config: Dict[str, str] = None):
+        # メール設定（環境変数またはuser_configから取得）
+        if email_config and email_config.get('email_to'):
+            self.smtp_host = os.getenv("EMAIL_HOST")
+            self.smtp_port = int(os.getenv("EMAIL_PORT", "587"))
+            self.username = os.getenv("EMAIL_USER")
+            self.password = os.getenv("EMAIL_PASS")
+            self.to_email = email_config.get('email_to')
+            self.user_name = email_config.get('user_name')
+        else:
+            # デフォルトの環境変数設定
+            self.smtp_host = os.getenv("EMAIL_HOST")
+            self.smtp_port = int(os.getenv("EMAIL_PORT", "587"))
+            self.username = os.getenv("EMAIL_USER")
+            self.password = os.getenv("EMAIL_PASS")
+            self.to_email = os.getenv("EMAIL_TO")
+            self.user_name = None
     
     def deliver_report(self, 
                       analysis_result: Dict[str, str],

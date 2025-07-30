@@ -21,10 +21,11 @@ class AnalysisError(Exception):
 class DocumentAnalyzer:
     """ドキュメント分析クラス"""
     
-    def __init__(self, enable_history: bool = True):
+    def __init__(self, enable_history: bool = True, user_name: str = None):
         self._client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self._enable_history = enable_history
         self._history = AnalysisHistory() if enable_history else None
+        self._user_name = user_name
     
     def analyze_documents(self, 
                          raw_data: List[Dict[str, str]], 
@@ -205,12 +206,13 @@ class DocumentAnalyzer:
     def _create_analysis_prompt(self, formatted_data: str, analysis_type: str) -> str:
         """分析タイプに応じたプロンプトを作成"""
         if analysis_type == AnalysisTypes.DOMI:
-            return DomiPrompts.create_prompt(formatted_data)
+            return DomiPrompts.create_prompt(formatted_data, self._user_name)
         elif analysis_type == AnalysisTypes.AGA:
-            return AgaPrompts.create_prompt(formatted_data)
+            return AgaPrompts.create_prompt(formatted_data, self._user_name)
         else:
             # フォールバック用の基本プロンプト
-            base_prompt = f"以下のデータを分析してください：\n\n{formatted_data}\n\n"
+            user_prefix = f"ユーザー「{self._user_name}」さんの" if self._user_name else ""
+            base_prompt = f"以下の{user_prefix}データを分析してください：\n\n{formatted_data}\n\n"
             return base_prompt + "このデータの特徴と傾向を分析してレポートを作成してください。"
 
 
