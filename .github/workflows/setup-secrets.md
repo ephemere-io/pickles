@@ -8,7 +8,6 @@
 - Google Sheetsからユーザーデータを読み込み、各ユーザーに個別レポートを送信
 - **現在はスケジュール実行を無効化済み（手動実行のみ）**
 - 手動実行時のパラメータ：
-  - **spreadsheet_id**: Google SpreadsheetsのID（必須）
   - **analysis_type**: 分析タイプ（`domi` または `aga`）
   - **delivery_method**: 配信方法（`email_html`推奨）
   - **days_back**: 取得日数
@@ -47,8 +46,8 @@ Settings → Secrets and variables → Actions から以下のシークレット
 ### Google Sheets API設定
 - **GOOGLE_SERVICE_ACCOUNT_KEY**: Google Service Accountの認証情報（JSON形式）
   - 下記「Google Service Account設定」の手順で取得
-- **SPREADSHEET_ID**: デフォルトのスプレッドシートID（オプション）
-  - 手動実行時に毎回入力したくない場合に設定
+- **SPREADSHEET_ID**: Google SpreadsheetsのID（必須）
+  - ユーザーデータが記載されているスプレッドシートのID
 
 ## 3. Google Service Account設定
 
@@ -135,7 +134,6 @@ Gmailを使用する場合は、アプリパスワードの生成が必要です
 2. "Multi-User Pickles Report"を選択
 3. "Run workflow"をクリック
 4. テスト用の設定：
-   - **spreadsheet_id**: 作成したスプレッドシートのID
    - **analysis_type**: `domi`（または `aga`）
    - **delivery_method**: `console`（ログに出力される）
    - **debug_mode**: `true`（環境変数確認）
@@ -152,9 +150,8 @@ Gmailを使用する場合は、アプリパスワードの生成が必要です
 ### ステップ3: 自動実行を有効化
 テストが成功したら：
 1. `.github/workflows/weekly-report.yml`の4-6行目のコメントを外す
-2. デフォルトのスプレッドシートIDを設定（環境変数 `SPREADSHEET_ID`）
-3. コミット・プッシュ
-4. 毎週月曜日午前9時に自動実行開始
+2. コミット・プッシュ
+3. 毎週月曜日午前9時に自動実行開始
 
 ## 8. セキュリティ考慮事項
 

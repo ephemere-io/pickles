@@ -6,10 +6,6 @@ on:
   #   - cron: '0 0 * * 1'
   workflow_dispatch: # 手動実行のみ有効（スケジュール実行を有効にする場合は上記のコメントを外す）
     inputs:
-      spreadsheet_id:
-        description: 'Google SpreadsheetsのID'
-        required: true
-        type: string
       analysis_type:
         description: '分析タイプ'
         required: false
@@ -76,15 +72,15 @@ jobs:
         EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
         GOOGLE_APPLICATION_CREDENTIALS: "service_account_key.json"
       run: |
-        # 手動実行時は入力値を使用、スケジュール実行時はデフォルト値を使用
-        SPREADSHEET_ID="${{ github.event.inputs.spreadsheet_id || secrets.SPREADSHEET_ID }}"
+        # 環境変数から設定を取得
+        SPREADSHEET_ID="${{ secrets.SPREADSHEET_ID }}"
         ANALYSIS="${{ github.event.inputs.analysis_type || 'domi' }}"
         DELIVERY="${{ github.event.inputs.delivery_method || 'email_html' }}"
         DAYS="${{ github.event.inputs.days_back || '7' }}"
         
         # 必須パラメータのチェック
         if [[ -z "$SPREADSHEET_ID" ]]; then
-          echo "❌ ERROR: SPREADSHEET_ID is required"
+          echo "❌ ERROR: SPREADSHEET_ID is not set in secrets"
           exit 1
         fi
         
