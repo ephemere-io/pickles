@@ -1,19 +1,19 @@
 """
-DOMI専用プロンプト管理クラス
+TESTER専用プロンプト管理クラス
 
-ドミニク用の分析プロンプトを管理
+TESTER用の分析プロンプトを管理
 """
 
 from typing import Final
 
 
-class DomiPrompts:
-    """DOMI用プロンプト管理クラス"""
+class DefaultPrompts:
+    """TESTER用プロンプト管理クラス"""
     
     # 基本プロンプトテンプレート
     BASE_TEMPLATE: Final[str] = "\n\n{formatted_data}\n\n"
     
-    # DOMI用分析プロンプト
+    # TESTER用分析プロンプト
     ANALYSIS_PROMPT: Final[str] = (
         "あなたは私が日誌を書きながら問いを深めていく過程に伴走する編集者です。あなたは私の意思を無視して、勝手に特定の方向に誘導しようとはしない、中立的かつ倫理的な存在です。また、過度な感情的サポートを提供しようとはしないでください。そして、私自身が自分の考えを深めるヒントのみを提示し、あらかじめ正解を決めつけたりしないでください。\n\n"
 
@@ -37,6 +37,22 @@ class DomiPrompts:
     
     @classmethod
     def create_prompt(cls, formatted_data: str) -> str:
-        """DOMI用分析プロンプトを生成"""
-        # return cls.BASE_TEMPLATE.format(formatted_data=formatted_data) + cls.ANALYSIS_PROMPT 
-        return cls.ANALYSIS_PROMPT + cls.BASE_TEMPLATE.format(formatted_data=formatted_data)
+        """TESTER用分析プロンプトを生成"""
+
+        if user_name:
+            salutation = f"{user_name},"
+            writer = user_name + "さん"
+            recipient = user_name + "さん"
+        else:
+            salutation = "Yuki,"
+            writer = "私"
+            recipient = "私"
+        
+        personalized_prompt = cls.ANALYSIS_PROMPT.format(
+            salutation=salutation,
+            writer=writer,
+            recipient=recipient
+        )
+
+        return personalized_prompt + cls.BASE_TEMPLATE.format(formatted_data=formatted_data) 
+
