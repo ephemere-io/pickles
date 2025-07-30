@@ -14,6 +14,7 @@ from typing import List, Dict
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from utils import Logger
 
 
 class GoogleSheetsReader:
@@ -58,7 +59,7 @@ class GoogleSheetsReader:
             values = result.get('values', [])
             
             if not values:
-                print("スプレッドシートにデータが見つかりません")
+                Logger.log_warning("スプレッドシートにデータが見つかりません")
                 return []
             
             # ヘッダー行を除外してユーザーデータを構築
@@ -76,25 +77,25 @@ class GoogleSheetsReader:
                         # デバッグ: APIキーの詳細を表示（最初と最後の文字のみ）
                         api_key = user_data['notion_api_key']
                         if len(api_key) > 10:
-                            print(f"   📝 APIキー: {api_key[:4]}...{api_key[-4:]} (長さ: {len(api_key)}文字)")
+                            api_key_info = f"{api_key[:4]}...{api_key[-4:]} (長さ: {len(api_key)}文字)"
                         else:
-                            print(f"   ⚠️ APIキーが短すぎます: {len(api_key)}文字")
+                            api_key_info = f"⚠️ APIキーが短すぎます: {len(api_key)}文字"
                         
                         user_data_list.append(user_data)
-                        print(f"✅ ユーザー追加: {user_data['user_name']} ({user_data['email_to']})")
+                        Logger.log_sheets_user_added(user_data['user_name'], user_data['email_to'], api_key_info)
                     else:
-                        print(f"⚠️ 行{i}: 必須フィールド(EMAIL_TO, NOTION_API_KEY)が不足しています")
+                        Logger.log_warning(f"行{i}: 必須フィールド(EMAIL_TO, NOTION_API_KEY)が不足しています")
                 else:
-                    print(f"⚠️ 行{i}: 列数が不足しています（最低3列必要）")
+                    Logger.log_warning(f"行{i}: 列数が不足しています（最低3列必要）")
             
-            print(f"📊 合計{len(user_data_list)}人のユーザーデータを読み込みました")
+            Logger.log_sheets_summary(len(user_data_list))
             return user_data_list
             
         except HttpError as error:
-            print(f"❌ Google Sheets API エラー: {error}")
+            Logger.log_sheets_error(str(error))
             return []
         except Exception as error:
-            print(f"❌ スプレッドシート読み込みエラー: {error}")
+            Logger.log_error(f"スプレッドシート読み込みエラー: {error}")
             return []
 
 
@@ -113,25 +114,28 @@ def execute_pickles_for_user(user_data: Dict[str, str], analysis_type: str, deli
             "--notion-api-key", user_data['notion_api_key']
         ]
         
-        print(f"🚀 {user_data['user_name']} の分析を開始...")
+        Logger.log_execution_start(user_data['user_name'])
         
         # Picklesを実行（元のcmdを使用）
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         
         if result.returncode == 0:
-            print(f"✅ {user_data['user_name']} の分析が完了しました")
+            Logger.log_execution_complete(user_data['user_name'])
+            # 成功時もログを表示
+            if result.stdout:
+                Logger.log_execution_log(result.stdout)
             return True
         else:
-            print(f"❌ {user_data['user_name']} の分析でエラーが発生:")
+            Logger.log_execution_error(user_data['user_name'])
             print(f"   STDOUT: {result.stdout}")
             print(f"   STDERR: {result.stderr}")
             return False
             
     except subprocess.TimeoutExpired:
-        print(f"⏰ {user_data['user_name']} の分析がタイムアウトしました")
+        Logger.log_execution_timeout(user_data['user_name'])
         return False
     except Exception as e:
-        print(f"❌ {user_data['user_name']} の実行エラー: {e}")
+        Logger.log_error(f"{user_data['user_name']} の実行エラー: {e}")
         return False
 
 
@@ -152,7 +156,7 @@ def main():
         sheets_reader = GoogleSheetsReader(args.service_account_key)
         
         # ユーザーデータを読み込み
-        print(f"📊 スプレッドシート {args.spreadsheet_id} からユーザーデータを読み込み中...")
+        Logger.log_sheets_reading(args.spreadsheet_id)
         user_data_list = sheets_reader.read_user_data(args.spreadsheet_id, args.range)
         
         if not user_data_list:

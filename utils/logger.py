@@ -92,6 +92,76 @@ class Logger:
         print(f"🚨 {message}")
         if details:
             print(f"🔎 詳細: {details}")
+    
+    # メール送信関連のログ
+    @staticmethod
+    def log_email_start(to_email: str, subject: str, from_email: str, smtp_info: str) -> None:
+        print(f"📧 HTMLメール送信開始: {to_email}")
+        print(f"   件名: {subject}")
+        print(f"   送信元: {from_email}")
+        print(f"   SMTPサーバー: {smtp_info}")
+    
+    @staticmethod
+    def log_email_progress(message: str) -> None:
+        print(f"   {message}")
+    
+    @staticmethod
+    def log_email_success(to_email: str) -> None:
+        print(f"   ✅ メール送信成功: {to_email}")
+    
+    @staticmethod
+    def log_email_error(error: str) -> None:
+        print(f"   ❌ メール送信エラー: {error}")
+    
+    # Google Sheets関連のログ
+    @staticmethod
+    def log_sheets_reading(spreadsheet_id: str) -> None:
+        print(f"📊 スプレッドシート {spreadsheet_id} からユーザーデータを読み込み中...")
+    
+    @staticmethod
+    def log_sheets_user_added(user_name: str, email: str, api_key_info: str = None) -> None:
+        if api_key_info:
+            print(f"   📝 APIキー: {api_key_info}")
+        print(f"✅ ユーザー追加: {user_name} ({email})")
+    
+    @staticmethod
+    def log_sheets_summary(user_count: int) -> None:
+        print(f"📊 合計{user_count}人のユーザーデータを読み込みました")
+    
+    @staticmethod
+    def log_sheets_error(error: str) -> None:
+        print(f"❌ Google Sheets API エラー: {error}")
+    
+    # 実行プロセス関連のログ
+    @staticmethod
+    def log_execution_start(user_name: str) -> None:
+        print(f"🚀 {user_name} の分析を開始...")
+    
+    @staticmethod
+    def log_execution_complete(user_name: str) -> None:
+        print(f"✅ {user_name} の分析が完了しました")
+    
+    @staticmethod
+    def log_execution_error(user_name: str) -> None:
+        print(f"❌ {user_name} の分析でエラーが発生:")
+    
+    @staticmethod
+    def log_execution_timeout(user_name: str) -> None:
+        print(f"⏰ {user_name} の分析がタイムアウトしました")
+    
+    @staticmethod
+    def log_execution_log(log_content: str) -> None:
+        print("📋 実行ログ:")
+        print(log_content)
+    
+    # Notion API関連のログ
+    @staticmethod
+    def log_notion_api_key(api_key_info: str) -> None:
+        print(f"🔑 NotionInput: APIキー設定済み ({api_key_info})")
+    
+    @staticmethod
+    def log_notion_no_api_key() -> None:
+        print("⚠️ NotionInput: APIキーが設定されていません")
 
 
  
