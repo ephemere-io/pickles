@@ -3,6 +3,7 @@ import datetime
 from typing import List, Dict, Optional
 from notion_client import Client
 from dotenv import load_dotenv
+from utils import Logger
 
 load_dotenv()
 
@@ -20,9 +21,9 @@ class NotionInput:
         
         # デバッグ: APIキーの状態を確認
         if self._api_key:
-            print(f"🔑 NotionInput: APIキー設定済み ({self._api_key[:4]}...{self._api_key[-4:]} - {len(self._api_key)}文字)")
+            Logger.log_notion_api_key(f"{self._api_key[:4]}...{self._api_key[-4:]} - {len(self._api_key)}文字")
         else:
-            print("⚠️ NotionInput: APIキーが設定されていません")
+            Logger.log_notion_no_api_key()
         
         self._client = Client(auth=self._api_key)
         self._check_api_connection()
