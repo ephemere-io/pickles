@@ -276,6 +276,10 @@ def main() -> None:
         )
         
         logger.log_results(results)
+        
+        # エラーがある場合は終了コード1で終了
+        if "error" in results:
+            sys.exit(1)
 
 
 if __name__ == "__main__":
