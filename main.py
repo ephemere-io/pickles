@@ -21,10 +21,19 @@ from utils import Logger, UsagePrinter, CommandArgs, DataSources, AnalysisTypes,
 class PicklesSystem:
     """Picklesシステムメインクラス"""
     
-    def __init__(self, enable_history: bool = True):
-        self._notion_input = NotionInput()
-        self._analyzer = DocumentAnalyzer(enable_history=enable_history)
-        self._delivery = ReportDelivery()
+    def __init__(self, user_config: Dict[str, str] = None, enable_history: bool = True):
+        # user_configから各種設定を取得
+        notion_api_key = user_config.get('notion_api_key') if user_config else None
+        email_config = {
+            'email_to': user_config.get('email_to'),
+            'user_name': user_config.get('user_name')
+        } if user_config and user_config.get('email_to') else None
+        
+        user_name = user_config.get('user_name') if user_config else None
+        
+        self._notion_input = NotionInput(api_key=notion_api_key)
+        self._analyzer = DocumentAnalyzer(enable_history=enable_history, user_name=user_name)
+        self._delivery = ReportDelivery(email_config=email_config)
         self._logger = Logger()
         
     def run_analysis(self, 
@@ -97,7 +106,10 @@ class PicklesSystem:
             "delivery": [DeliveryMethods.CONSOLE],
             "days": 7,
             "history": True,
-            "schedule": False
+            "schedule": False,
+            "user_name": None,
+            "email_to": None,
+            "notion_api_key": None
         }
         
         parsed_args = default_args.copy()
@@ -125,6 +137,15 @@ class PicklesSystem:
                 i += 1
             elif arg == CommandArgs.SCHEDULE:
                 parsed_args["schedule"] = True
+            elif arg == CommandArgs.USER_NAME and i + 1 < len(args):
+                parsed_args["user_name"] = args[i + 1]
+                i += 1
+            elif arg == CommandArgs.EMAIL_TO and i + 1 < len(args):
+                parsed_args["email_to"] = args[i + 1]
+                i += 1
+            elif arg == CommandArgs.NOTION_API_KEY and i + 1 < len(args):
+                parsed_args["notion_api_key"] = args[i + 1]
+                i += 1
             
             i += 1
         
@@ -171,8 +192,17 @@ def main() -> None:
         usage_printer.print_usage()
         sys.exit(0)
     
-    # 履歴設定でシステムを初期化
-    system = PicklesSystem(enable_history=args["history"])
+    # ユーザー設定の構築
+    user_config = None
+    if args.get("user_name") or args.get("email_to") or args.get("notion_api_key"):
+        user_config = {
+            'user_name': args.get("user_name"),
+            'email_to': args.get("email_to"),
+            'notion_api_key': args.get("notion_api_key")
+        }
+    
+    # システムを初期化
+    system = PicklesSystem(user_config=user_config, enable_history=args["history"])
     
     logger.log_system_start()
     if args["history"]:

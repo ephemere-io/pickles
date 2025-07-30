@@ -15,8 +15,9 @@ class NotionInputError(Exception):
 class NotionInput:
     """Notionからデータを取得するInputクラス"""
     
-    def __init__(self):
-        self._client = Client(auth=os.getenv("NOTION_API_KEY"))
+    def __init__(self, api_key: str = None):
+        self._api_key = api_key or os.getenv("NOTION_API_KEY")
+        self._client = Client(auth=self._api_key)
         self._check_api_connection()
     
     
