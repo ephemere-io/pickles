@@ -43,7 +43,7 @@ on:
 jobs:
   send-report:
     runs-on: ubuntu-latest
-    environment: production
+    environment: test
     
     steps:
     - name: Checkout repository
@@ -66,7 +66,6 @@ jobs:
         GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
       run: |
         echo "$GOOGLE_SERVICE_ACCOUNT_KEY" > service_account_key.json
-        export GOOGLE_APPLICATION_CREDENTIALS="service_account_key.json"
         
     - name: Run Multi-User Pickles analysis
       env:
