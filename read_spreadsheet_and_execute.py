@@ -73,6 +73,13 @@ class GoogleSheetsReader:
                     
                     # 必須フィールドのバリデーション
                     if user_data['email_to'] and user_data['notion_api_key']:
+                        # デバッグ: APIキーの詳細を表示（最初と最後の文字のみ）
+                        api_key = user_data['notion_api_key']
+                        if len(api_key) > 10:
+                            print(f"   📝 APIキー: {api_key[:4]}...{api_key[-4:]} (長さ: {len(api_key)}文字)")
+                        else:
+                            print(f"   ⚠️ APIキーが短すぎます: {len(api_key)}文字")
+                        
                         user_data_list.append(user_data)
                         print(f"✅ ユーザー追加: {user_data['user_name']} ({user_data['email_to']})")
                     else:
@@ -108,23 +115,8 @@ def execute_pickles_for_user(user_data: Dict[str, str], analysis_type: str, deli
         
         print(f"🚀 {user_data['user_name']} の分析を開始...")
         
-        # 環境変数でAPIキーを渡す（ログに出力されないようにする）
-        env = os.environ.copy()
-        env['TEMP_NOTION_API_KEY'] = user_data['notion_api_key']
-        env['TEMP_EMAIL_TO'] = user_data['email_to']
-        env['TEMP_USER_NAME'] = user_data['user_name']
-        
-        # APIキーをコマンドライン引数から除外
-        cmd_safe = [
-            sys.executable, "main.py",
-            "--analysis", analysis_type,
-            "--delivery", delivery_methods,
-            "--days", str(days),
-            "--use-temp-env"  # 環境変数使用フラグ
-        ]
-        
-        # Picklesを実行
-        result = subprocess.run(cmd_safe, capture_output=True, text=True, timeout=300, env=env)
+        # Picklesを実行（元のcmdを使用）
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         
         if result.returncode == 0:
             print(f"✅ {user_data['user_name']} の分析が完了しました")
