@@ -36,7 +36,41 @@ class DomiPrompts:
     )
     
     @classmethod
-    def create_prompt(cls, formatted_data: str) -> str:
+    def create_prompt(cls, formatted_data: str, user_name: str = None) -> str:
         """DOMI用分析プロンプトを生成"""
-        # return cls.BASE_TEMPLATE.format(formatted_data=formatted_data) + cls.ANALYSIS_PROMPT 
-        return cls.ANALYSIS_PROMPT + cls.BASE_TEMPLATE.format(formatted_data=formatted_data)
+        # ユーザー名が指定されている場合はパーソナライズ
+        if user_name:
+            personalized_prompt = cls.ANALYSIS_PROMPT.replace(
+                "あなたは私の「人生が発酵すること」をサポートするAIエージェントです。",
+                f"あなたは{user_name}さんの「人生が発酵すること」をサポートするAIエージェントです。"
+            ).replace(
+                "私は日々、日誌を書いています。",
+                f"{user_name}さんは日々、日誌を書いています。"
+            ).replace(
+                "この期間の私の日誌",
+                f"この期間の{user_name}さんの日誌"
+            ).replace(
+                "私が後で日誌を振り返り",
+                f"{user_name}さんが後で日誌を振り返り"
+            ).replace(
+                "私の内面と、私の他者",
+                f"{user_name}さんの内面と、{user_name}さんの他者"
+            ).replace(
+                "私が自己決定",
+                f"{user_name}さんが自己決定"
+            ).replace(
+                "私が目的達成主義",
+                f"{user_name}さんが目的達成主義"
+            ).replace(
+                "私が読んでイメージを膨らませられる",
+                f"{user_name}さんが読んでイメージを膨らませられる"
+            ).replace(
+                "私はあなたの手紙を読み",
+                f"{user_name}さんはあなたの手紙を読み"
+            ).replace(
+                "この期間に私が向き合っていたと",
+                f"この期間に{user_name}さんが向き合っていたと"
+            )
+            return personalized_prompt + cls.BASE_TEMPLATE.format(formatted_data=formatted_data)
+        else:
+            return cls.ANALYSIS_PROMPT + cls.BASE_TEMPLATE.format(formatted_data=formatted_data)
