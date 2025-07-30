@@ -2,6 +2,7 @@ import json
 import os
 from datetime import datetime
 from typing import List, Dict, Optional
+from utils import logger
 
 
 class AnalysisHistory:
@@ -95,7 +96,7 @@ class AnalysisHistory:
             with open(self.history_file, 'w', encoding='utf-8') as f:
                 json.dump(history, f, ensure_ascii=False, indent=2)
         except IOError as e:
-            print(f"⚠️ 履歴保存エラー: {e}")
+            logger.error("履歴保存エラー", "ai", error=str(e))
     
     def clear_history(self) -> None:
         """履歴をクリア"""

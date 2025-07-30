@@ -1,167 +1,110 @@
-from typing import List, Dict
+import json
+from datetime import datetime
+from typing import Dict, Any, Optional
 
 class Logger:
-    """ログ出力を担当するクラス"""
+    """シンプルで分析しやすい単一クラスLogger"""
     
-    @staticmethod
-    def log_start(data_source: str, days: int) -> None:
-        print(f"📥 データ取得中... (ソース: {data_source}, 期間: {days}日)")
+    # レベルと文字のマッピング
+    LEVEL_TEXTS = {
+        "DEBUG": "DEBUG:",
+        "INFO": "INFO:", 
+        "WARNING": "WARN:",
+        "ERROR": "ERROR:",
+        "SUCCESS": "SUCCESS:"
+    }
     
-    @staticmethod
-    def log_data_fetched(count: int) -> None:
-        print(f"✅ {count}件のデータを取得しました")
+    # カテゴリと絵文字のマッピング
+    CATEGORY_EMOJIS = {
+        "system": "🥒",
+        "data": "📊", 
+        "ai": "🤖",
+        "api": "🔗",
+        "email": "📧",
+        "file": "📁",
+        "db": "💾",
+        "network": "🌐",
+        "security": "🔒",
+        "performance": "⚡",
+        "notion": "📋",
+        "sheets": "📈",
+        "execution": "🔄",
+        "scheduler": "⏰"
+    }
     
-    @staticmethod
-    def log_no_data() -> None:
-        print("⚠️  取得データが0件です。")
+    def __init__(self, json_output: bool = False):
+        """
+        Args:
+            json_output: Trueならログを構造化JSON形式でも出力
+        """
+        self.json_output = json_output
     
-    @staticmethod
-    def log_analysis_start(analysis_type: str) -> None:
-        print(f"🔄 分析処理中... (タイプ: {analysis_type})")
+    def _log(self, level: str, category: str, message: str, extra_data: Dict[str, Any]):
+        """内部ログメソッド"""
+        timestamp = datetime.now()
+        
+        # 構造化データ
+        log_data = {
+            "timestamp": timestamp.isoformat(),
+            "level": level,
+            "category": category,
+            "message": message,
+            **extra_data
+        }
+        
+        # JSON出力（分析用）
+        if self.json_output:
+            print(json.dumps(log_data, ensure_ascii=False))
+        
+        # 人間が読みやすい出力
+        level_text = self.LEVEL_TEXTS.get(level, "INFO")
+        category_emoji = self.CATEGORY_EMOJIS.get(category, "📋")
+        
+        time_str = timestamp.strftime("%H:%M:%S")
+        human_readable = f"{level_text} {category_emoji} [{time_str}] {message}"
+        
+        # 追加データがあれば表示
+        if extra_data:
+            details = ", ".join(f"{k}={v}" for k, v in extra_data.items())
+            human_readable += f" ({details})"
+        
+        print(human_readable)
     
-    @staticmethod
-    def log_analysis_complete(data_count: int) -> None:
-        print(f"✅ 分析完了 (対象データ: {data_count}件)")
+    # === 基本ログメソッド ===
+    def debug(self, message: str, category: str = "system", **kwargs):
+        self._log("DEBUG", category, message, kwargs)
     
-    @staticmethod
-    def log_delivery_start(delivery_methods: List[str]) -> None:
-        print(f"📤 レポート配信中... (方法: {delivery_methods})")
+    def info(self, message: str, category: str = "system", **kwargs):
+        self._log("INFO", category, message, kwargs)
     
-    @staticmethod
-    def log_delivery_complete() -> None:
-        print("✅ 配信完了")
+    def warning(self, message: str, category: str = "system", **kwargs):
+        self._log("WARNING", category, message, kwargs)
     
-    @staticmethod
-    def log_error(error_message: str) -> None:
-        print(f"❌ エラー: {error_message}")
+    def error(self, message: str, category: str = "system", **kwargs):
+        self._log("ERROR", category, message, kwargs)
     
-    @staticmethod
-    def log_system_start() -> None:
-        print("🥒 Pickles Personal Insight Analytics System")
-        print("=" * 50)
+    def success(self, message: str, category: str = "system", **kwargs):
+        self._log("SUCCESS", category, message, kwargs)
     
-    @staticmethod
-    def log_results(results: Dict[str, str]) -> None:
-        print("\n" + "=" * 50)
-        print("📋 実行結果:")
-        for method, result in results.items():
-            print(f"  {method}: {result}")
+    # === よく使うパターンのメソッド ===
+    def start(self, what: str, category: str = "system", **kwargs):
+        """開始ログ"""
+        self.info(f"{what}開始", category, **kwargs)
     
-    @staticmethod
-    def log_scheduler_start(cron_day: str, cron_hour: int, cron_minute: int) -> None:
-        print(f"⏰ スケジューラー開始: 毎週{cron_day}曜日 {cron_hour:02d}:{cron_minute:02d} JST")
+    def complete(self, what: str, category: str = "system", count: Optional[int] = None, **kwargs):
+        """完了ログ"""
+        message = f"{what}完了"
+        if count is not None:
+            kwargs["count"] = count
+        self.success(message, category, **kwargs)
     
-    # 汎用デバッグログメソッド
-    @staticmethod
-    def log_debug(message: str) -> None:
-        print(f"🔍 {message}")
-    
-    @staticmethod
-    def log_info(message: str) -> None:
-        print(f"ℹ️  {message}")
-    
-    @staticmethod
-    def log_warning(message: str) -> None:
-        print(f"⚠️  {message}")
-    
-    @staticmethod
-    def log_error_detail(message: str, details: Dict = None) -> None:
-        print(f"💥 {message}")
-        if details:
-            print(f"🔎 詳細: {details}")
-    
-    # AI分析関連の特化ログ
-    @staticmethod
-    def log_ai_request(message: str) -> None:
-        print(f"🤖 {message}")
-    
-    @staticmethod
-    def log_ai_response(message: str) -> None:
-        print(f"📨 {message}")
-    
-    @staticmethod
-    def log_ai_processing(message: str) -> None:
-        print(f"⚙️  {message}")
-    
-    @staticmethod
-    def log_ai_success(message: str) -> None:
-        print(f"🎉 {message}")
-    
-    @staticmethod
-    def log_ai_error(message: str, details: Dict = None) -> None:
-        print(f"🚨 {message}")
-        if details:
-            print(f"🔎 詳細: {details}")
-    
-    # メール送信関連のログ
-    @staticmethod
-    def log_email_start(to_email: str, subject: str, from_email: str, smtp_info: str) -> None:
-        print(f"📧 HTMLメール送信開始: {to_email}")
-        print(f"   件名: {subject}")
-        print(f"   送信元: {from_email}")
-        print(f"   SMTPサーバー: {smtp_info}")
-    
-    @staticmethod
-    def log_email_progress(message: str) -> None:
-        print(f"   {message}")
-    
-    @staticmethod
-    def log_email_success(to_email: str) -> None:
-        print(f"   ✅ メール送信成功: {to_email}")
-    
-    @staticmethod
-    def log_email_error(error: str) -> None:
-        print(f"   ❌ メール送信エラー: {error}")
-    
-    # Google Sheets関連のログ
-    @staticmethod
-    def log_sheets_reading(spreadsheet_id: str) -> None:
-        print(f"📊 スプレッドシート {spreadsheet_id} からユーザーデータを読み込み中...")
-    
-    @staticmethod
-    def log_sheets_user_added(user_name: str, email: str, api_key_info: str = None) -> None:
-        if api_key_info:
-            print(f"   📝 APIキー: {api_key_info}")
-        print(f"✅ ユーザー追加: {user_name} ({email})")
-    
-    @staticmethod
-    def log_sheets_summary(user_count: int) -> None:
-        print(f"📊 合計{user_count}人のユーザーデータを読み込みました")
-    
-    @staticmethod
-    def log_sheets_error(error: str) -> None:
-        print(f"❌ Google Sheets API エラー: {error}")
-    
-    # 実行プロセス関連のログ
-    @staticmethod
-    def log_execution_start(user_name: str) -> None:
-        print(f"🚀 {user_name} の分析を開始...")
-    
-    @staticmethod
-    def log_execution_complete(user_name: str) -> None:
-        print(f"✅ {user_name} の分析が完了しました")
-    
-    @staticmethod
-    def log_execution_error(user_name: str) -> None:
-        print(f"❌ {user_name} の分析でエラーが発生:")
-    
-    @staticmethod
-    def log_execution_timeout(user_name: str) -> None:
-        print(f"⏰ {user_name} の分析がタイムアウトしました")
-    
-    @staticmethod
-    def log_execution_log(log_content: str) -> None:
-        print("📋 実行ログ:")
-        print(log_content)
-    
-    # Notion API関連のログ
-    @staticmethod
-    def log_notion_api_key(api_key_info: str) -> None:
-        print(f"🔑 NotionInput: APIキー設定済み ({api_key_info})")
-    
-    @staticmethod
-    def log_notion_no_api_key() -> None:
-        print("⚠️ NotionInput: APIキーが設定されていません")
+    def failed(self, what: str, reason: str = "", category: str = "system", **kwargs):
+        """失敗ログ"""
+        message = f"{what}失敗"
+        if reason:
+            kwargs["reason"] = reason
+        self.error(message, category, **kwargs)
 
 
- 
+# グローバルインスタンス（便利のため）
+logger = Logger()

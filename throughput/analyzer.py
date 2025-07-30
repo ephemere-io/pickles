@@ -4,7 +4,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 
 # 定数をインポート
-from utils import AnalysisTypes, Logger
+from utils import AnalysisTypes, logger
 # プロンプト管理クラスをインポート
 from .prompts import DomiPrompts, AgaPrompts
 # 履歴管理クラスをインポート
@@ -100,14 +100,14 @@ class DocumentAnalyzer:
         
         # 履歴を使用する場合
         if self._enable_history and self._history:
-            Logger.log_ai_processing("過去の分析履歴を含めて分析を実行")
+            logger.info("過去の分析履歴を含めてAI分析を実行", "ai", analysis_type=analysis_type)
             # プロンプト作成
             prompt = self._create_analysis_prompt(formatted_data, analysis_type)
             # 履歴を含むメッセージ配列を取得
             messages = self._history.get_conversation_history(analysis_type, prompt)
-            Logger.log_debug(f"履歴含む総メッセージ数: {len(messages)}")
+            logger.debug("履歴メッセージ構成完了", "ai", message_count=len(messages))
         else:
-            Logger.log_ai_processing("履歴なしで新規分析を実行")
+            logger.info("履歴なしで新規AI分析を実行", "ai", analysis_type=analysis_type)
             # プロンプト作成
             prompt = self._create_analysis_prompt(formatted_data, analysis_type)
             # 単一メッセージとして送信
@@ -115,7 +115,10 @@ class DocumentAnalyzer:
         
         # AI分析実行
         try:
-            Logger.log_ai_request(f"データ長={len(formatted_data)}文字, max_tokens=50000でリクエスト送信")
+            logger.start("AI APIリクエスト送信", "ai", 
+                        data_length=len(formatted_data), 
+                        max_tokens=50000, 
+                        message_count=len(messages))
             
             resp = self._client.responses.create(
                 model="o4-mini",
@@ -124,17 +127,17 @@ class DocumentAnalyzer:
                 max_output_tokens=50000
             )
             
-            Logger.log_ai_response("APIレスポンス受信完了")
+            logger.success("AI APIレスポンス受信", "ai")
             data_dict = resp.to_dict()
-            Logger.log_ai_processing(f"レスポンス構造解析: {list(data_dict.keys())}")
+            logger.debug("レスポンス構造解析", "ai", response_keys=list(data_dict.keys()))
             
             # レスポンス構造をより詳細にログ出力
             if "output" in data_dict:
-                Logger.log_debug(f"アウトプットアイテム数: {len(data_dict['output'])}")
+                logger.debug("アウトプットアイテム解析", "ai", item_count=len(data_dict['output']))
                 for i, item in enumerate(data_dict["output"]):
-                    Logger.log_debug(f"アイテム {i}: type={item.get('type')}, keys={list(item.keys())}")
+                    logger.debug(f"アイテム{i}詳細", "ai", type=item.get('type'), keys=list(item.keys()))
             else:
-                Logger.log_ai_error("レスポンスに'output'キーが存在しません", {"response": data_dict})
+                logger.error("レスポンスに'output'キーが存在しません", "ai", response=data_dict)
             
             message_block = next(
                 (item for item in data_dict["output"] if item.get("type") == "message"),
@@ -145,41 +148,38 @@ class DocumentAnalyzer:
                 # より詳細なエラー情報を提供
                 available_types = [item.get("type") for item in data_dict.get("output", [])]
                 error_msg = f"メッセージブロックが見つかりません"
-                Logger.log_ai_error(error_msg, {
-                    "available_types": available_types,
-                    "full_response": data_dict
-                })
+                logger.error(error_msg, "ai", 
+                           available_types=available_types,
+                           response_keys=list(data_dict.keys()))
                 raise RuntimeError(f"{error_msg}。利用可能なタイプ: {available_types}")
             
-            Logger.log_ai_processing(f"メッセージブロック発見: コンテンツ数={len(message_block.get('content', []))}")
+            logger.debug("メッセージブロック発見", "ai", content_count=len(message_block.get('content', [])))
             
             if not message_block.get("content") or len(message_block["content"]) == 0:
                 error_msg = "メッセージブロックにコンテンツが含まれていません"
-                Logger.log_ai_error(error_msg, {"message_block": message_block})
+                logger.error(error_msg, "ai", message_block_keys=list(message_block.keys()))
                 raise RuntimeError(error_msg)
             
             insights = message_block["content"][0].get("text", "")
-            Logger.log_ai_success(f"分析結果生成完了: {len(insights)}文字")
+            logger.complete("AI分析処理", "ai", result_length=len(insights))
             
             # 履歴に保存
             if self._enable_history and self._history:
                 data_summary = f"{len(data)}件のデータ（平均{sum(len(item.get('text', '')) for item in data) // len(data)}文字）"
                 self._history.save_analysis(analysis_type, data_summary, insights)
-                Logger.log_debug("分析結果を履歴に保存完了")
+                logger.debug("分析結果を履歴に保存", "ai")
             
             return insights
             
         except Exception as e:
             # 詳細なエラー情報を含める
-            error_details = {
-                "error_type": type(e).__name__,
-                "error_message": str(e),
-                "formatted_data_length": len(formatted_data),
-                "analysis_type": analysis_type,
-                "history_enabled": self._enable_history
-            }
-            Logger.log_ai_error("AI分析処理でエラーが発生しました", error_details)
-            raise AnalysisError(f"AI分析エラー: {e} | 詳細: {error_details}")
+            logger.error("AI分析処理でエラーが発生", "ai",
+                        error_type=type(e).__name__,
+                        error_message=str(e),
+                        data_length=len(formatted_data),
+                        analysis_type=analysis_type,
+                        history_enabled=self._enable_history)
+            raise AnalysisError(f"AI分析エラー: {e}")
     
     def _format_data_for_analysis(self, data: List[Dict[str, str]]) -> str:
         """分析用にデータをフォーマット"""
