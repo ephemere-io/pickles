@@ -7,7 +7,7 @@ import smtplib
 from dotenv import load_dotenv
 
 # 定数をインポート
-from utils import DeliveryMethods, Logger
+from utils import DeliveryMethods, logger
 
 load_dotenv()
 
@@ -187,12 +187,11 @@ class ReportDelivery:
             raise OutputError("メール設定が不完全です。環境変数を確認してください。")
         
         try:
-            Logger.log_email_start(
-                self.to_email, 
-                subject, 
-                self.username, 
-                f"{self.smtp_host}:{self.smtp_port}"
-            )
+            logger.start("HTMLメール送信処理", "email", 
+                        to_email=self.to_email, 
+                        subject=subject,
+                        from_user=self.username, 
+                        smtp_server=f"{self.smtp_host}:{self.smtp_port}")
             
             msg = MIMEText(html_body, "html", _charset="utf-8")
             msg["Subject"] = subject
@@ -200,18 +199,18 @@ class ReportDelivery:
             msg["To"] = self.to_email
             
             with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                Logger.log_email_progress("📡 SMTPサーバーに接続...")
+                logger.debug("SMTPサーバーに接続", "email")
                 server.starttls()
-                Logger.log_email_progress("🔒 TLS暗号化を開始...")
+                logger.debug("TLS暗号化開始", "email")
                 server.login(self.username, self.password)
-                Logger.log_email_progress("✅ ログイン成功")
+                logger.debug("ログイン成功", "email")
                 server.send_message(msg)
-                Logger.log_email_success(self.to_email)
+                logger.complete("HTMLメール送信", "email", to_email=self.to_email)
             
             return True
             
         except Exception as e:
-            Logger.log_email_error(str(e))
+            logger.error("HTMLメール送信エラー", "email", error=str(e))
             raise OutputError(f"HTMLメール送信エラー: {e}")
     
     def _save_text_file(self, content: str, filename: Optional[str] = None) -> str:

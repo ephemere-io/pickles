@@ -14,7 +14,7 @@ from typing import List, Dict
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from utils import Logger
+from utils import logger
 
 
 class GoogleSheetsReader:
@@ -59,7 +59,7 @@ class GoogleSheetsReader:
             values = result.get('values', [])
             
             if not values:
-                Logger.log_warning("スプレッドシートにデータが見つかりません")
+                logger.warning("スプレッドシートにデータが見つかりません", "sheets")
                 return []
             
             # ヘッダー行を除外してユーザーデータを構築
@@ -82,20 +82,24 @@ class GoogleSheetsReader:
                             api_key_info = f"⚠️ APIキーが短すぎます: {len(api_key)}文字"
                         
                         user_data_list.append(user_data)
-                        Logger.log_sheets_user_added(user_data['user_name'], user_data['email_to'], api_key_info)
+                        logger.info("ユーザーデータ追加", "sheets", 
+                                   user=user_data['user_name'], 
+                                   email=user_data['email_to'], 
+                                   api_key_info=api_key_info)
                     else:
-                        Logger.log_warning(f"行{i}: 必須フィールド(EMAIL_TO, NOTION_API_KEY)が不足しています")
+                        logger.warning(f"行{i}: 必須フィールドが不足", "sheets", 
+                                      row=i, missing="EMAIL_TO, NOTION_API_KEY")
                 else:
-                    Logger.log_warning(f"行{i}: 列数が不足しています（最低3列必要）")
+                    logger.warning(f"行{i}: 列数が不足", "sheets", row=i, required_columns=3)
             
-            Logger.log_sheets_summary(len(user_data_list))
+            logger.success("スプレッドシートデータ読み込み完了", "sheets", user_count=len(user_data_list))
             return user_data_list
             
         except HttpError as error:
-            Logger.log_sheets_error(str(error))
+            logger.error("Google Sheets APIエラー", "sheets", error=str(error))
             return []
         except Exception as error:
-            Logger.log_error(f"スプレッドシート読み込みエラー: {error}")
+            logger.error("スプレッドシート読み込みエラー", "sheets", error=str(error))
             return []
 
 
@@ -114,28 +118,28 @@ def execute_pickles_for_user(user_data: Dict[str, str], analysis_type: str, deli
             "--notion-api-key", user_data['notion_api_key']
         ]
         
-        Logger.log_execution_start(user_data['user_name'])
+        logger.start(f"{user_data['user_name']}のPickles実行", "execution")
         
         # Picklesを実行（元のcmdを使用）
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         
         if result.returncode == 0:
-            Logger.log_execution_complete(user_data['user_name'])
+            logger.complete(f"{user_data['user_name']}のPickles実行", "execution")
             # 成功時もログを表示
             if result.stdout:
-                Logger.log_execution_log(result.stdout)
+                logger.debug("実行ログ出力", "execution", stdout=result.stdout)
             return True
         else:
-            Logger.log_execution_error(user_data['user_name'])
-            print(f"   STDOUT: {result.stdout}")
-            print(f"   STDERR: {result.stderr}")
+            logger.failed(f"{user_data['user_name']}のPickles実行", "execution")
+            logger.error("実行エラー詳細", "execution", 
+                        stdout=result.stdout, stderr=result.stderr)
             return False
             
     except subprocess.TimeoutExpired:
-        Logger.log_execution_timeout(user_data['user_name'])
+        logger.error("実行タイムアウト", "execution", user=user_data['user_name'], timeout=300)
         return False
     except Exception as e:
-        Logger.log_error(f"{user_data['user_name']} の実行エラー: {e}")
+        logger.error("実行中の例外発生", "execution", user=user_data['user_name'], error=str(e))
         return False
 
 
@@ -156,44 +160,40 @@ def main():
         sheets_reader = GoogleSheetsReader(args.service_account_key)
         
         # ユーザーデータを読み込み
-        Logger.log_sheets_reading(args.spreadsheet_id)
+        logger.start("スプレッドシート読み込み", "sheets", spreadsheet_id=args.spreadsheet_id)
         user_data_list = sheets_reader.read_user_data(args.spreadsheet_id, args.range)
         
         if not user_data_list:
-            print("❌ 実行可能なユーザーデータが見つかりませんでした")
+            logger.error("実行可能なユーザーデータが見つかりません", "execution")
             sys.exit(1)
         
         # 各ユーザーに対してPicklesを実行
         success_count = 0
         total_count = len(user_data_list)
         
-        print(f"\n🎯 {total_count}人のユーザーに対してPickles分析を実行します")
-        print(f"   分析タイプ: {args.analysis}")
-        print(f"   配信方法: {args.delivery}")
-        print(f"   取得日数: {args.days}日\n")
+        logger.info(f"{total_count}人のユーザーに対してPickles分析を実行", "execution", 
+                   user_count=total_count, analysis_type=args.analysis, 
+                   delivery=args.delivery, days=args.days)
         
         for i, user_data in enumerate(user_data_list, 1):
-            print(f"[{i}/{total_count}] ", end="")
+            logger.info(f"[{i}/{total_count}] ユーザー処理開始", "execution", 
+                       user=user_data['user_name'], progress=f"{i}/{total_count}")
             if execute_pickles_for_user(user_data, args.analysis, args.delivery, args.days):
                 success_count += 1
-            print()  # 改行
         
         # 実行結果サマリー
-        print("=" * 50)
-        print(f"📊 実行結果サマリー")
-        print(f"   成功: {success_count}/{total_count} 人")
-        print(f"   失敗: {total_count - success_count}/{total_count} 人")
-        print("=" * 50)
+        logger.info("実行結果サマリー", "execution", 
+                   success=success_count, total=total_count, failed=total_count - success_count)
         
         if success_count == total_count:
-            print("🎉 すべてのユーザーの分析が正常に完了しました！")
+            logger.success("すべてのユーザーの分析が正常完了", "execution")
             sys.exit(0)
         else:
-            print("⚠️ 一部のユーザーで分析に失敗しました")
+            logger.warning("一部のユーザーで分析に失敗", "execution")
             sys.exit(1)
             
     except Exception as e:
-        print(f"❌ 実行エラー: {e}")
+        logger.error("実行エラー", "execution", error=str(e))
         sys.exit(1)
 
 

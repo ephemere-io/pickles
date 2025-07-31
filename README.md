@@ -2,7 +2,7 @@
 
 > Pickling everyday thoughts and feelings
 
-NotionデータベースとOpenAI APIを使用して、日記エントリから感情・思考の分析レポートを自動生成し、定期的にメール送信するPythonアプリケーションです。
+NotionデータベースとOpenAI APIを使用して、日記エントリから感情・思考の分析レポートを自動生成・配信するPythonアプリケーションです。単体実行とマルチユーザー対応のGitHub Actions実行に対応しています。
 
 ## 🚀 クイックスタート
 
@@ -85,6 +85,10 @@ uv run python main.py --help
 | `--days`    | 取得日数          | 整数値                        | 7 |
 | `--history` | 分析履歴使用       | `on`, `off`                  | on |
 | `--schedule` | 定期実行モード       | フラグ                        | false |
+| `--user-name` | ユーザー名 | 文字列 | 環境変数 |
+| `--email-to` | 送信先メールアドレス | メールアドレス | 環境変数 |
+| `--notion-api-key` | Notion APIキー | APIキー文字列 | 環境変数 |
+| `--help` | ヘルプ表示 | フラグ | false |
 
 ## 🔍 Notion分析処理の詳細フロー（2025/07/29時点）
 
@@ -298,6 +302,7 @@ uv python list
 ```
 pickles/
 ├── main.py                    # メインアプリケーション・エントリーポイント
+├── read_spreadsheet_and_execute.py  # マルチユーザー実行スクリプト
 ├── inputs/
 │   ├── __init__.py           # Notion入力モジュール
 │   └── notion_input.py       # Notionデータ取得（統合クラス設計）
@@ -316,6 +321,9 @@ pickles/
 │   ├── __init__.py           # ユーティリティ（定数管理含む）
 │   ├── logger.py             # ログ出力（絵文字付き）
 │   └── printer.py            # ヘルプ表示・定数定義
+├── .github/workflows/
+│   ├── weekly-report.yml     # GitHub Actions マルチユーザー実行
+│   └── setup-secrets.md      # GitHub Actions設定ガイド
 ├── .env                      # 環境変数（要作成）
 ├── analysis_history.json     # AI分析履歴データ（自動生成）
 ├── pyproject.toml            # プロジェクト設定
@@ -366,12 +374,54 @@ scheduler.add_job(job, trigger="cron", day_of_week="mon", hour=7, minute=0)
 
 </details>
 
+## 🤖 GitHub Actions マルチユーザー実行
+
+複数ユーザーの分析を自動化するGitHub Actions機能が利用できます。
+
+### 機能概要
+- Google Sheetsからユーザー情報を読み込み
+- 各ユーザーに個別のレポートを配信
+- 手動実行または定期実行（毎週月曜9時）
+- デバッグモード対応
+
+### 実行パラメータ
+| パラメータ | 説明 | 選択肢 | デフォルト |
+|-----------|------|--------|------------|
+| `analysis_type` | 分析タイプ | `domi`, `aga` | `domi` |
+| `delivery_method` | 配信方法 | `email_html`, `email_text`, `console`, `file_text`, `file_html` | `email_html` |
+| `days_back` | 取得日数 | 整数値 | `7` |
+| `debug_mode` | デバッグモード | `true`, `false` | `false` |
+
+### 設定方法
+詳細な設定手順は`.github/workflows/setup-secrets.md`を参照してください：
+- GitHub Secrets設定
+- Google Service Account作成
+- Google Sheets API設定
+- スプレッドシート構造
+- 各ユーザーのNotion設定
+
+### マルチユーザー実行コマンド
+```bash
+# Google Sheetsからマルチユーザー実行
+python read_spreadsheet_and_execute.py --spreadsheet-id "SPREADSHEET_ID" --analysis domi --delivery email_html
+
+# 単体ユーザー実行（マルチユーザー対応オプション付き）
+python main.py --user-name "田中太郎" --email-to "tanaka@example.com" --notion-api-key "secret_xxx"
+```
+
 ## 🔒 セキュリティ
 
 > [!WARNING]
-> `.env`ファイルにはAPIキーなどの機密情報が含まれます。**絶対にGitにコミットしないでください**。
+> `.env`ファイルとAPIキーなどの機密情報は**絶対にGitにコミットしないでください**。
 
-`.gitignore`で以下がブロックされていることを確認してください：
+### 保護すべきファイル
+`.gitignore`で以下がブロックされていることを確認：
 ```
 .env
+service_account_key.json
 ```
+
+### GitHub Actions セキュリティ
+- 全てのAPIキーはGitHub Secretsで管理
+- Google Service Accountは最小権限（Sheets読み取りのみ）
+- 実行環境は`test`環境を使用

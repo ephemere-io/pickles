@@ -3,7 +3,7 @@ import datetime
 from typing import List, Dict, Optional
 from notion_client import Client
 from dotenv import load_dotenv
-from utils import Logger
+from utils import logger
 
 load_dotenv()
 
@@ -21,9 +21,10 @@ class NotionInput:
         
         # デバッグ: APIキーの状態を確認
         if self._api_key:
-            Logger.log_notion_api_key(f"{self._api_key[:4]}...{self._api_key[-4:]} - {len(self._api_key)}文字")
+            api_key_masked = f"{self._api_key[:4]}...{self._api_key[-4:]}"
+            logger.info("Notion APIキー設定確認", "notion", key_length=len(self._api_key), masked_key=api_key_masked)
         else:
-            Logger.log_notion_no_api_key()
+            logger.warning("Notion APIキーが設定されていません", "notion")
         
         self._client = Client(auth=self._api_key)
         self._check_api_connection()
@@ -32,19 +33,19 @@ class NotionInput:
     def fetch_notion_documents(self, days: int = 7) -> List[Dict[str, str]]:
         """Notionから最近のドキュメントを取得（データベース優先、フォールバック付き）"""
         cutoff_date = self._calculate_cutoff_date(days)
-        print(f"🔍 Notion文書を取得中... (過去{days}日間, カットオフ日付: {cutoff_date})")
+        logger.start("Notion文書取得", "notion", days=days, cutoff_date=cutoff_date)
         
         try:
             # まずデータベースからの取得を試行
             database_entries = self._try_fetch_database_entries(cutoff_date)
             if database_entries:
-                print(f"✅ データベースから{len(database_entries)}件のエントリを取得")
+                logger.complete("データベースエントリ取得", "notion", count=len(database_entries))
                 return database_entries
             
             # データベースが見つからない場合は通常の検索を実行
-            print("📄 データベースが見つからないため、ページ検索にフォールバック")
+            logger.info("データベース未発見、ページ検索にフォールバック", "notion")
             page_results = self._fetch_page_search_results(cutoff_date)
-            print(f"📊 ページ検索結果: {len(page_results)}件")
+            logger.complete("ページ検索結果取得", "notion", count=len(page_results))
             return page_results
             
         except Exception as e:
@@ -54,23 +55,23 @@ class NotionInput:
         """データベースからエントリ取得を試行"""
         try:
             # 利用可能なデータベースを検索
-            print("🗄️  データベースを検索中...")
+            logger.debug("データベース検索開始", "notion")
             search_response = self._client.search(
                 filter={"value": "database", "property": "object"}
             )
             
             databases = search_response.get("results", [])
-            print(f"📊 {len(databases)}個のデータベースが見つかりました")
+            logger.info("データベース検索完了", "notion", found_count=len(databases))
             
             if not databases:
-                print("❌ データベースが見つかりません")
+                logger.warning("データベースが見つからない", "notion")
                 return []
             
             # 最初に見つかったデータベースからエントリを取得
             database_id = databases[0].get("id")
             database_title = databases[0].get("title", [])
             db_name = database_title[0].get("plain_text", "Unknown") if database_title else "Unknown"
-            print(f"📂 データベース '{db_name}' (ID: {database_id[:8]}...) を使用")
+            logger.info("データベース選択", "notion", db_name=db_name, db_id=database_id[:12]+"...")
             
             if not database_id:
                 return []
@@ -79,7 +80,7 @@ class NotionInput:
             return self._fetch_database_entries(database_id, cutoff_date)
             
         except Exception as e:
-            print(f"❌ データベースアクセスエラー: {e}")
+            logger.error("データベースアクセスエラー", "notion", error=str(e))
             return []  # データベースアクセスに失敗した場合は空リストを返す
     
     def _fetch_database_entries(self, database_id: str, cutoff_date: str) -> List[Dict[str, str]]:
@@ -132,7 +133,7 @@ class NotionInput:
     
     def _fetch_page_search_results(self, cutoff_date: str) -> List[Dict[str, str]]:
         """通常のページ検索結果を取得"""
-        print(f"🔎 ページ検索を実行中...")
+        logger.debug("ページ検索開始", "notion")
         # Notion APIのsearchメソッドは最大100件までしか返さない
         # ページネーションを使用して全結果を取得
         all_pages = []
@@ -157,9 +158,9 @@ class NotionInput:
             has_more = response.get("has_more", False)
             start_cursor = response.get("next_cursor")
             
-            print(f"  📄 取得済み: {len(all_pages)}件 (has_more: {has_more})")
+            logger.debug("ページ検索進捗", "notion", current_count=len(all_pages), has_more=has_more)
         
-        print(f"📑 検索で合計{len(all_pages)}件のページが見つかりました")
+        logger.info("ページ検索完了", "notion", total_pages=len(all_pages))
         
         documents = []
         filtered_count = 0
@@ -173,7 +174,10 @@ class NotionInput:
             
             # 最初の10件と最近のページの詳細を表示
             if i < 10 or is_recent:
-                print(f"  ページ{i+1}: {page_title[:30]}... (作成: {created_time[:10]}, 編集: {last_edited[:10]}, 最近: {is_recent})")
+                logger.debug("ページ詳細情報", "notion", 
+                           page_num=i+1, title=page_title[:30], 
+                           created=created_time[:10], edited=last_edited[:10], 
+                           is_recent=is_recent)
             
             if is_recent:
                 doc = self._extract_document_info(page)
@@ -181,19 +185,20 @@ class NotionInput:
                     # コンテンツが空でないかチェック
                     if doc.get("text", "").strip():
                         documents.append(doc)
-                        print(f"    ✅ ドキュメントとして追加 (内容: {len(doc['text'])}文字)")
+                        logger.debug("ドキュメント追加", "notion", chars=len(doc['text']))
                     else:
                         recent_but_no_content += 1
-                        print(f"    ⚠️  コンテンツが空のため除外")
+                        logger.debug("コンテンツ空により除外", "notion")
                 else:
-                    print(f"    ⚠️  ドキュメント情報の抽出に失敗")
+                    logger.debug("ドキュメント情報抽出失敗", "notion")
             else:
                 filtered_count += 1
         
-        print(f"📊 統計:")
-        print(f"  - 日付フィルタで除外: {filtered_count}件")
-        print(f"  - 最近だがコンテンツなし: {recent_but_no_content}件")
-        print(f"  - 最終的に取得: {len(documents)}件")
+        logger.info("Notion文書取得統計", "notion", 
+                   total_pages=len(all_pages),
+                   filtered_by_date=filtered_count, 
+                   recent_no_content=recent_but_no_content, 
+                   final_documents=len(documents))
         return documents
     
     def _extract_date_property(self, page: dict) -> Optional[str]:
@@ -217,7 +222,7 @@ class NotionInput:
         # ページタイプを確認
         parent = page.get("parent", {})
         parent_type = parent.get("type", "")
-        print(f"    📋 ページタイプ: {parent_type} (ID: {page_id[:8]}...)")
+        logger.debug("ページタイプ確認", "notion", type=parent_type, page_id=page_id[:12]+"...")
         
         content = self._get_page_content(page_id)
         
@@ -254,9 +259,10 @@ class NotionInput:
         
         # デバッグ情報
         if not content.strip():
-            print(f"⚠️  データベースエントリ {page_id[:8]}... のコンテンツが空です")
-            print(f"   プロパティコンテンツ: {'あり' if property_content else 'なし'}")
-            print(f"   ページコンテンツ: {'あり' if page_content else 'なし'}")
+            logger.warning("データベースエントリのコンテンツが空", "notion", 
+                          page_id=page_id[:12]+"...", 
+                          has_property_content=bool(property_content), 
+                          has_page_content=bool(page_content))
         
         # データベースエントリの日付プロパティを優先的に取得
         date = self._extract_date_property(page) or page.get("created_time", "")[:10]
@@ -348,7 +354,7 @@ class NotionInput:
         
         # デバッグ: プロパティの内容
         if content_parts:
-            print(f"📋 プロパティから{len(content_parts)}項目のコンテンツを抽出")
+            logger.debug("プロパティからコンテンツ抽出", "notion", property_count=len(content_parts))
         
         return "\n".join(content_parts)
     
@@ -379,16 +385,20 @@ class NotionInput:
             
             # デバッグ: コンテンツの取得状況をログ出力
             if not content.strip():
-                print(f"⚠️  ページ {page_id[:8]}... のコンテンツが空です（ブロック数: {len(blocks)}）")
+                logger.debug("ページコンテンツが空", "notion", page_id=page_id[:12]+"...")
                 if blocks:
-                    print(f"   最初のブロック型: {blocks[0].get('type', 'unknown')}")
+                    logger.debug("ブロック詳細", "notion", 
+                               block_count=len(blocks), 
+                               first_block_type=blocks[0].get('type', 'unknown'))
             else:
-                print(f"✅ ページ {page_id[:8]}... のコンテンツを取得（{len(content)}文字）")
+                logger.debug("ページコンテンツ取得成功", "notion", 
+                           page_id=page_id[:12]+"...", content_length=len(content))
             
             return content
             
         except Exception as e:
-            print(f"❌ ページ {page_id[:8]}... のコンテンツ取得エラー: {e}")
+            logger.error("ページコンテンツ取得エラー", "notion", 
+                        page_id=page_id[:12]+"...", error=str(e))
             return ""  # エラー時は空文字を返す
     
     def _extract_text_from_block(self, block: dict) -> str:
@@ -443,7 +453,7 @@ class NotionInput:
         last_edited_time = page.get("last_edited_time", "")
         
         if not created_time and not last_edited_time:
-            print(f"    ⚠️  ページに時刻情報がありません")
+            logger.warning("ページに時刻情報なし", "notion")
             return False
         
         created_date = created_time[:10] if created_time else "1900-01-01"
@@ -454,7 +464,8 @@ class NotionInput:
         
         # デバッグ: 日付比較の詳細（除外される場合のみ）
         if not is_recent and created_date != "1900-01-01":
-            print(f"    📅 日付フィルタ: 作成{created_date}, 編集{edited_date} < {cutoff_date} (除外)")
+            logger.debug("ページを日付で除外", "notion", 
+                        created=created_date, edited=edited_date, cutoff=cutoff_date)
         
         return is_recent
     
@@ -463,7 +474,7 @@ class NotionInput:
         try:
             # ユーザー情報を取得してAPIキーが有効か確認
             user_info = self._client.users.me()
-            print(f"✅ Notion API接続成功: {user_info.get('name', 'Unknown User')}")
+            logger.success("Notion API接続成功", "notion", user=user_info.get('name', 'Unknown User'))
             
             # 簡単な検索を実行してアクセス権限を確認
             test_search = self._client.search(
@@ -471,10 +482,10 @@ class NotionInput:
                 page_size=1
             )
             accessible_pages = len(test_search.get("results", []))
-            print(f"📊 アクセス可能なページ数（サンプル）: {accessible_pages}+")
+            logger.info("Notionアクセス権限確認", "notion", accessible_pages=f"{accessible_pages}+")
             
         except Exception as e:
-            print(f"❌ Notion API接続エラー: {e}")
+            logger.error("Notion API接続エラー", "notion", error=str(e))
             raise NotionInputError(f"Notion API接続エラー: {e}")
     
     @staticmethod
