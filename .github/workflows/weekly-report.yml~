@@ -1,9 +1,9 @@
 name: Multi-User Pickles Report
 
 on:
-  schedule:
-    # 毎週日本時間月曜日の午前7時（前日のUTC 23:00）に実行
-    - cron: '0 22 * * 6'
+  # schedule:
+  #   # 毎週月曜日の日本時間午前9時（UTC 00:00）に実行
+  #   - cron: '0 0 * * 1'
   workflow_dispatch: # 手動実行のみ有効（スケジュール実行を有効にする場合は上記のコメントを外す）
     inputs:
       analysis_type:
