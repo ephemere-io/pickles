@@ -1,0 +1,44 @@
+{
+  "metadata": {
+    "captured_at": "2025-08-12T12:11:00.000000",
+    "api_key_suffix": "89ibni",
+    "document_count": 7
+  },
+  "documents": [
+    {
+      "date": "2025-08-11",
+      "title": "Learning Goals for 2025",
+      "text": "This year I want to focus on:\n1. Mastering TypeScript and advanced React patterns\n2. Learning system design principles\n3. Contributing to open source projects\n4. Writing technical blog posts\n5. Speaking at at least one conference"
+    },
+    {
+      "date": "2025-08-10",
+      "title": "Book Notes: Clean Architecture",
+      "text": "Key takeaways from Uncle Bob's Clean Architecture:\n- Dependencies should point inward\n- Business rules are the core of the system\n- Frameworks are details, not the architecture\n- The architecture should be testable without external dependencies"
+    },
+    {
+      "date": "2025-08-09", 
+      "title": "Side Project Ideas",
+      "text": "Brainstorming new project ideas:\n- Personal finance tracker with investment analysis\n- AI-powered code review assistant\n- Location-based social network for developers\n- Automated testing framework for APIs\n- Markdown-based knowledge management system"
+    },
+    {
+      "date": "2025-08-08",
+      "title": "Conference Talk Proposal",
+      "text": "Title: 'Building Resilient Frontend Applications'\nAbstract: Explore patterns and practices for building React applications that gracefully handle failures, network issues, and edge cases. Cover error boundaries, retry logic, and progressive enhancement.\nTarget audience: Frontend developers with 2+ years experience"
+    },
+    {
+      "date": "2025-08-07",
+      "title": "Interview Preparation Notes",
+      "text": "System design concepts to review:\n- Load balancing strategies\n- Database sharding and replication\n- Caching patterns (Redis, CDN)\n- Message queues and pub/sub\n- Monitoring and observability\n- Security best practices"
+    },
+    {
+      "date": "2025-08-06",
+      "title": "Productivity Optimization",
+      "text": "Trying new productivity techniques:\n- Pomodoro Technique: 25 min focus + 5 min break\n- Time blocking for deep work\n- Digital minimalism: checking email only 2x/day\n- Using Notion for task management and note-taking\n- Early morning coding sessions (6-8 AM)"
+    },
+    {
+      "date": "2025-08-05",
+      "title": "Open Source Contribution Plan",
+      "text": "Projects I want to contribute to:\n1. React DevTools - fix accessibility issues\n2. Next.js - improve documentation\n3. TypeScript - help with community issues\n4. Prettier - add new formatting options\n5. Create my own CLI tool for developers"
+    }
+  ]
+}

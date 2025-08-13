@@ -46,3 +46,7 @@ analysis_history.json
 # Report output files
 pickles_report_*.txt
 pickles_report_*.html
+
+# Test mock data files (except mock_data_1.json for example)
+tests/fixtures/mock_data/notion/mock_data_[2-9].json
+tests/fixtures/mock_data/notion/mock_data_[1-9][0-9].json
