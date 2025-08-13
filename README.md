@@ -319,14 +319,31 @@ pickles/
 │   └── report_generator.py   # レポート生成・メール送信（統合クラス設計）
 ├── utils/
 │   ├── __init__.py           # ユーティリティ（定数管理含む）
-│   ├── logger.py             # ログ出力（絵文字付き）
+│   ├── logger.py             # ログ出力（テキストレベル表示）
 │   └── printer.py            # ヘルプ表示・定数定義
+├── tests/                    # テストスイート
+│   ├── README.md             # テストドキュメント
+│   ├── __init__.py
+│   ├── fixtures/             # テスト用ヘルパー
+│   │   ├── __init__.py
+│   │   ├── test_config.py    # テスト共通設定
+│   │   ├── mock_handlers.py  # モックデータ管理
+│   │   └── mock_data/        # モックデータディレクトリ
+│   │       └── notion/       # Notion APIモックデータ
+│   │           ├── mock_data_1.json  # サンプルモックデータ
+│   └── smoke/                # スモークテスト
+│       ├── __init__.py
+│       ├── test_basic_commands.py    # 基本機能テスト（全モックデータ）
+│       ├── test_option_combinations.py # オプション組み合わせテスト（全モックデータ）
+│       └── test_error_handling.py   # エラーハンドリングテスト（全モックデータ）
 ├── .github/workflows/
 │   ├── weekly-report.yml     # GitHub Actions マルチユーザー実行
 │   └── setup-secrets.md      # GitHub Actions設定ガイド
 ├── .env                      # 環境変数（要作成）
 ├── analysis_history.json     # AI分析履歴データ（自動生成）
 ├── pyproject.toml            # プロジェクト設定
+├── pytest.ini                # pytest設定
+├── capture_mock.py           # モックデータ生成スクリプト
 ├── uv.lock                   # 依存関係ロックファイル
 └── README.md                 # このファイル
 ```
@@ -408,6 +425,55 @@ python read_spreadsheet_and_execute.py --spreadsheet-id "SPREADSHEET_ID" --analy
 # 単体ユーザー実行（マルチユーザー対応オプション付き）
 python main.py --user-name "田中太郎" --email-to "tanaka@example.com" --notion-api-key "secret_xxx"
 ```
+
+## 🧪 テスト
+
+Picklesにはスモークテスト（基本動作確認テスト）とモックデータシステムが含まれています。
+
+### モックデータシステム
+
+テストでは、実際のNotion APIを呼び出す代わりに、`tests/fixtures/mock_data/notion/`ディレクトリに保存されたモックデータを使用します。
+
+#### モックデータの仕組み
+- 各APIキーに対応するJSONファイルが保存されています
+- テスト実行時は`.env`のNOTION_API_KEYに基づいて対応するモックデータを自動選択
+- 4つの異なるデータパターンで網羅的なテストが可能
+
+#### モックデータの生成
+
+```bash
+# 全てのAPIキーのモックデータを生成
+uv run python capture_mock.py --all
+
+# 特定のAPIキーのモックデータを生成
+uv run python capture_mock.py --api-key ntn_YOUR_API_KEY_HERE
+```
+
+### テストの実行
+
+```bash
+# テスト実行
+uv sync --extra test
+uv run pytest tests/smoke/ -m smoke
+```
+
+### テスト内容
+
+**基本コマンドテスト** (`test_basic_commands.py`)
+- ヘルプ表示、基本的な配信方法、履歴機能、日数指定オプション
+- 全4つのモックデータで各機能をテスト
+- モックデータの利用可能性確認
+
+**オプション組み合わせテスト** (`test_option_combinations.py`)
+- 分析タイプ（domi/aga）と配信方法の組み合わせ動作
+- 全4つのモックデータで各組み合わせをテスト
+
+**エラーハンドリングテスト** (`test_error_handling.py`)
+- 無効なオプション指定時のエラー処理
+- 全4つのモックデータでエラー耐性を確認
+
+
+詳細は`tests/README.md`を参照してください。
 
 ## 🔒 セキュリティ
 

@@ -121,19 +121,47 @@ class PicklesSystem:
             if arg == CommandArgs.HELP:
                 return {"help": True}
             elif arg == CommandArgs.SOURCE and i + 1 < len(args):
-                parsed_args["source"] = args[i + 1]
+                source_value = args[i + 1]
+                if source_value != DataSources.NOTION:
+                    logger.error("無効なデータソース", "system", value=source_value, 
+                               valid_values=[DataSources.NOTION])
+                    sys.exit(1)
+                parsed_args["source"] = source_value
                 i += 1
             elif arg == CommandArgs.ANALYSIS and i + 1 < len(args):
-                parsed_args["analysis"] = args[i + 1]
+                analysis_value = args[i + 1]
+                valid_analysis_types = [AnalysisTypes.DOMI, AnalysisTypes.AGA]
+                if analysis_value not in valid_analysis_types:
+                    logger.error("無効な分析タイプ", "system", value=analysis_value,
+                               valid_values=valid_analysis_types)
+                    sys.exit(1)
+                parsed_args["analysis"] = analysis_value
                 i += 1
             elif arg == CommandArgs.DELIVERY and i + 1 < len(args):
-                parsed_args["delivery"] = args[i + 1].split(",")
+                delivery_values = args[i + 1].split(",")
+                valid_delivery_methods = [
+                    DeliveryMethods.CONSOLE, DeliveryMethods.EMAIL_TEXT,
+                    DeliveryMethods.EMAIL_HTML, DeliveryMethods.FILE_TEXT,
+                    DeliveryMethods.FILE_HTML
+                ]
+                for delivery_value in delivery_values:
+                    if delivery_value not in valid_delivery_methods:
+                        logger.error("無効な配信方法", "system", value=delivery_value,
+                                   valid_values=valid_delivery_methods)
+                        sys.exit(1)
+                parsed_args["delivery"] = delivery_values
                 i += 1
             elif arg == CommandArgs.DAYS and i + 1 < len(args):
                 parsed_args["days"] = int(args[i + 1])
                 i += 1
             elif arg == CommandArgs.HISTORY and i + 1 < len(args):
-                parsed_args["history"] = args[i + 1].lower() == "on"
+                history_value = args[i + 1].lower()
+                valid_history_values = ["on", "off"]
+                if history_value not in valid_history_values:
+                    logger.error("無効な履歴オプション", "system", value=history_value,
+                                valid_values=valid_history_values)
+                    sys.exit(1)
+                parsed_args["history"] = history_value == "on"
                 i += 1
             elif arg == CommandArgs.SCHEDULE:
                 parsed_args["schedule"] = True
@@ -202,19 +230,47 @@ def parse_command_args(args: List[str]) -> Dict[str, any]:
         if arg == CommandArgs.HELP:
             return {"help": True}
         elif arg == CommandArgs.SOURCE and i + 1 < len(args):
-            parsed_args["source"] = args[i + 1]
+            source_value = args[i + 1]
+            if source_value != DataSources.NOTION:
+                logger.error("無効なデータソース", "system", value=source_value, 
+                           valid_values=[DataSources.NOTION])
+                sys.exit(1)
+            parsed_args["source"] = source_value
             i += 1
         elif arg == CommandArgs.ANALYSIS and i + 1 < len(args):
-            parsed_args["analysis"] = args[i + 1]
+            analysis_value = args[i + 1]
+            valid_analysis_types = [AnalysisTypes.DOMI, AnalysisTypes.AGA]
+            if analysis_value not in valid_analysis_types:
+                logger.error("無効な分析タイプ", "system", value=analysis_value,
+                           valid_values=valid_analysis_types)
+                sys.exit(1)
+            parsed_args["analysis"] = analysis_value
             i += 1
         elif arg == CommandArgs.DELIVERY and i + 1 < len(args):
-            parsed_args["delivery"] = args[i + 1].split(",")
+            delivery_values = args[i + 1].split(",")
+            valid_delivery_methods = [
+                DeliveryMethods.CONSOLE, DeliveryMethods.EMAIL_TEXT,
+                DeliveryMethods.EMAIL_HTML, DeliveryMethods.FILE_TEXT,
+                DeliveryMethods.FILE_HTML
+            ]
+            for delivery_value in delivery_values:
+                if delivery_value not in valid_delivery_methods:
+                    logger.error("無効な配信方法", "system", value=delivery_value,
+                               valid_values=valid_delivery_methods)
+                    sys.exit(1)
+            parsed_args["delivery"] = delivery_values
             i += 1
         elif arg == CommandArgs.DAYS and i + 1 < len(args):
             parsed_args["days"] = int(args[i + 1])
             i += 1
         elif arg == CommandArgs.HISTORY and i + 1 < len(args):
-            parsed_args["history"] = args[i + 1].lower() == "on"
+            history_value = args[i + 1].lower()
+            valid_history_values = ["on", "off"]
+            if history_value not in valid_history_values:
+                logger.error("無効な履歴オプション", "system", value=history_value,
+                            valid_values=valid_history_values)
+                sys.exit(1)
+            parsed_args["history"] = history_value == "on"
             i += 1
         elif arg == CommandArgs.SCHEDULE:
             parsed_args["schedule"] = True
@@ -261,6 +317,14 @@ def main() -> None:
         logger.info("分析履歴機能有効", "system", feature="history")
     else:
         logger.info("分析履歴機能無効", "system", feature="history")
+    
+    # 設定情報をログ出力（テスト用の明確な形式で）
+    delivery_str = ",".join(args["delivery"]) if isinstance(args["delivery"], list) else args["delivery"]
+    logger.info("設定確認", "system", 
+               analysis=args["analysis"], 
+               delivery=delivery_str, 
+               source=args["source"],
+               days=args["days"])
     
     if args["schedule"]:
         # スケジュール実行モード

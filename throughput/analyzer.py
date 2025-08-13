@@ -22,7 +22,13 @@ class DocumentAnalyzer:
     """ドキュメント分析クラス"""
     
     def __init__(self, enable_history: bool = True, user_name: str = None):
-        self._client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        # テストモードの場合はモックを使用
+        if os.getenv('PICKLES_TEST_MODE') == '1':
+            from tests.fixtures.mock_handlers import mock_openai_api
+            self._client = mock_openai_api()(api_key=os.getenv("OPENAI_API_KEY"))
+        else:
+            self._client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        
         self._enable_history = enable_history
         self._history = AnalysisHistory() if enable_history else None
         self._user_name = user_name
