@@ -12,3 +12,9 @@ dependencies = [
     "google-auth>=2.29.0",
     "google-api-python-client>=2.137.0",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+    "pytest-timeout>=2.4.0",
+]

@@ -26,7 +26,13 @@ class NotionInput:
         else:
             logger.warning("Notion APIキーが設定されていません", "notion")
         
-        self._client = Client(auth=self._api_key)
+        # テストモードの場合はモックを使用
+        if os.getenv('PICKLES_TEST_MODE') == '1':
+            from tests.fixtures.mock_handlers import mock_notion_api
+            self._client = mock_notion_api()(auth=self._api_key)
+        else:
+            self._client = Client(auth=self._api_key)
+        
         self._check_api_connection()
     
     
@@ -132,15 +138,17 @@ class NotionInput:
             return []
     
     def _fetch_page_search_results(self, cutoff_date: str) -> List[Dict[str, str]]:
-        """通常のページ検索結果を取得"""
-        logger.debug("ページ検索開始", "notion")
-        # Notion APIのsearchメソッドは最大100件までしか返さない
-        # ページネーションを使用して全結果を取得
+        """通常のページ検索結果を取得（日付による早期終了付き）"""
+        logger.debug("ページ検索開始", "notion", cutoff_date=cutoff_date)
+        
         all_pages = []
         has_more = True
         start_cursor = None
+        consecutive_old_pages = 0  # 連続して古いページの数
+        max_consecutive_old = 50   # 連続して古いページがこの数を超えたら終了
+        max_total_pages = 500      # 最大取得ページ数
         
-        while has_more:
+        while has_more and len(all_pages) < max_total_pages:
             params = {
                 "filter": {"value": "page", "property": "object"},
                 "sort": {"direction": "descending", "timestamp": "last_edited_time"},
@@ -151,14 +159,41 @@ class NotionInput:
                 params["start_cursor"] = start_cursor
             
             response = self._client.search(**params)
-            
             pages = response.get("results", [])
-            all_pages.extend(pages)
             
-            has_more = response.get("has_more", False)
-            start_cursor = response.get("next_cursor")
+            # 各ページの日付をチェックして早期終了判定
+            recent_pages_in_batch = 0
+            for page in pages:
+                is_recent = self._is_recent_page(page, cutoff_date)
+                if is_recent:
+                    recent_pages_in_batch += 1
+                    consecutive_old_pages = 0  # 最近のページが見つかったらカウンターリセット
+                else:
+                    consecutive_old_pages += 1
+                
+                # 連続して古いページが続いたら早期終了
+                if consecutive_old_pages >= max_consecutive_old:
+                    logger.info("連続古ページによる早期終了", "notion", 
+                              consecutive_old=consecutive_old_pages, 
+                              total_fetched=len(all_pages) + len(pages[:pages.index(page)]))
+                    all_pages.extend(pages[:pages.index(page) + 1])
+                    has_more = False
+                    break
             
-            logger.debug("ページ検索進捗", "notion", current_count=len(all_pages), has_more=has_more)
+            if has_more:  # 早期終了していない場合のみページを追加
+                all_pages.extend(pages)
+                has_more = response.get("has_more", False)
+                start_cursor = response.get("next_cursor")
+                
+                logger.debug("ページ検索進捗", "notion", 
+                           current_count=len(all_pages), 
+                           recent_in_batch=recent_pages_in_batch,
+                           consecutive_old=consecutive_old_pages,
+                           has_more=has_more)
+        
+        # 最大ページ数に達した場合の警告
+        if len(all_pages) >= max_total_pages:
+            logger.warning("最大取得ページ数に到達", "notion", max_pages=max_total_pages)
         
         logger.info("ページ検索完了", "notion", total_pages=len(all_pages))
         

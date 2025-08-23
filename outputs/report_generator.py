@@ -162,6 +162,12 @@ class ReportDelivery:
     
     def _send_text_email(self, subject: str, body: str) -> bool:
         """テキストメールを送信"""
+        # テストモードの場合はモックを使用
+        if os.getenv('PICKLES_TEST_MODE') == '1':
+            logger.info("テストモード: メール送信をスキップ", "email", 
+                       subject=subject, to=self.to_email)
+            return True
+        
         if not self._check_email_config():
             raise OutputError("メール設定が不完全です。環境変数を確認してください。")
         
@@ -183,6 +189,12 @@ class ReportDelivery:
     
     def _send_html_email(self, subject: str, html_body: str) -> bool:
         """HTMLメールを送信"""
+        # テストモードの場合はモックを使用
+        if os.getenv('PICKLES_TEST_MODE') == '1':
+            logger.info("テストモード: HTMLメール送信をスキップ", "email", 
+                       subject=subject, to=self.to_email)
+            return True
+        
         if not self._check_email_config():
             raise OutputError("メール設定が不完全です。環境変数を確認してください。")
         
