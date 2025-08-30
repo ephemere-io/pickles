@@ -11,7 +11,7 @@ class DomiPrompts:
     """DOMI用プロンプト管理クラス"""
     
     # 基本プロンプトテンプレート
-    BASE_TEMPLATE: Final[str] = f"\n\n{formatted_data}\n\n"
+    BASE_TEMPLATE: Final[str] = "\n\n{formatted_data}\n\n"
     
     # DOMI用分析プロンプト
     ANALYSIS_PROMPT: Final[str] = (
@@ -31,7 +31,7 @@ class DomiPrompts:
 
 "最後にあなたには、この期間の私の日誌から最も特徴的な「問い」を一つから三つ提示してほしいです。問いは、日誌に書いた具体的な事象と絡めたもので、過度に抽象化しないでください。また、問いの文章は長くせず、簡潔なものにしてください。\n\n"
 
-f"なお、出力言語は{language}で書き出してください。\n\n"
+"なお、出力言語は{language}で書き出してください。\n\n"
 
 "-------------------------\n\n"
     )
