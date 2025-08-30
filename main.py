@@ -69,7 +69,6 @@ class PicklesSystem:
             analysis_result = self._analyzer.analyze_documents(
                 raw_data, 
                 analysis_type=analysis_type,
-                language=language,
                 apply_filters=True
             )
             logger.complete(f"{analysis_type}分析処理", "ai", analyzed_count=analysis_result['data_count'])
