@@ -11,7 +11,8 @@ CommandArgs = SimpleNamespace(
     HELP="--help",
     USER_NAME="--user-name",
     EMAIL_TO="--email-to",
-    NOTION_API_KEY="--notion-api-key"
+    NOTION_API_KEY="--notion-api-key",
+    LANGUAGE="--language"
 )
 
 DataSources = SimpleNamespace(
@@ -53,6 +54,7 @@ class UsagePrinter:
   {CommandArgs.USER_NAME}     ユーザー名 (マルチユーザー対応)
   {CommandArgs.EMAIL_TO}      送信先メールアドレス (マルチユーザー対応)
   {CommandArgs.NOTION_API_KEY} Notion APIキー (マルチユーザー対応)
+  {CommandArgs.LANGUAGE}      言語設定 (マルチユーザー対応)
   {CommandArgs.HELP}          このヘルプを表示
 
 例:
@@ -65,6 +67,6 @@ class UsagePrinter:
   
 マルチユーザー例:
   python main.py {CommandArgs.USER_NAME} "田中太郎" {CommandArgs.EMAIL_TO} "tanaka@example.com" {CommandArgs.NOTION_API_KEY} "secret_xxx"
-  python read_spreadsheet_and_execute.py --spreadsheet-id "1ABC...XYZ" --analysis {AnalysisTypes.DOMI} --delivery {DeliveryMethods.EMAIL_HTML}
+  python read_spreadsheet_and_execute.py --spreadsheet-id "1ABC...XYZ" --analysis {AnalysisTypes.DOMI} --delivery {DeliveryMethods.EMAIL_HTML} --language {CommandArgs.LANGUAGE}
         """
         print(usage) 
