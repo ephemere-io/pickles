@@ -21,7 +21,7 @@ class AnalysisError(Exception):
 class DocumentAnalyzer:
     """ドキュメント分析クラス"""
     
-    def __init__(self, enable_history: bool = True, user_name: str = None):
+    def __init__(self, enable_history: bool = True, user_name: str = None, language: str = None):
         # テストモードの場合はモックを使用
         if os.getenv('PICKLES_TEST_MODE') == '1':
             from tests.fixtures.mock_handlers import mock_openai_api
@@ -32,6 +32,7 @@ class DocumentAnalyzer:
         self._enable_history = enable_history
         self._history = AnalysisHistory() if enable_history else None
         self._user_name = user_name
+        self._language = language
     
     def analyze_documents(self, 
                          raw_data: List[Dict[str, str]], 
