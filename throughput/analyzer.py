@@ -120,7 +120,7 @@ class DocumentAnalyzer:
             # 単一メッセージとして送信
             messages = [{"role": "user", "content": prompt}]
         
-        logger.debug("作成したプロンプト: %s", prompt)
+        logger.debug(f"作成したプロンプト: {prompt}")
 
         # AI分析実行
         try:
