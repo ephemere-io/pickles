@@ -41,7 +41,7 @@ class DomiPrompts:
         """DOMI用分析プロンプトを生成"""
         # ユーザー名が指定されている場合はパーソナライズ
         if user_name:
-            personalized_prompt = cls.ANALYSIS_PROMPT.replace(
+            personalized_prompt = cls.ANALYSIS_PROMPT.format(language=language).replace(
                 "あなたは私の「人生が発酵すること」をサポートするAIエージェントです。",
                 f"あなたは{user_name}さんの「人生が発酵すること」をサポートするAIエージェントです。"
             ).replace(
@@ -74,4 +74,4 @@ class DomiPrompts:
             )
             return personalized_prompt + cls.BASE_TEMPLATE.format(formatted_data=formatted_data)
         else:
-            return cls.ANALYSIS_PROMPT + cls.BASE_TEMPLATE.format(formatted_data=formatted_data)
+            return cls.ANALYSIS_PROMPT.format(language=language) + cls.BASE_TEMPLATE.format(formatted_data=formatted_data)
