@@ -1,9 +1,9 @@
 name: Dev-User Pickles Report
 
 on:
-  #schedule:
+  schedule:
     # 毎週日本時間月曜日の午前7時（前日のUTC 23:00）に実行
-    #- cron: '0 22 * * 0'
+    - cron: '0 22 * * 0'
   workflow_dispatch: # 手動実行のみ有効（スケジュール実行を有効にする場合は上記のコメントを外す）
     inputs:
       analysis_type:
