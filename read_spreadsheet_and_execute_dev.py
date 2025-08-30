@@ -70,7 +70,7 @@ class GoogleSheetsReader:
                     user_data = {
                         'email_to': row[0].strip() if row[0] else '',
                         'notion_api_key': row[1].strip() if row[1] else '',
-                        'user_name': row[2].strip() if row[2] else f'User {i-1}'
+                        'user_name': row[2].strip() if row[2] else f'User {i-1}',
                         'language' : row[3].strip() if row[3] else '日本語',
                     }
                     
