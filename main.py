@@ -326,7 +326,9 @@ def main() -> None:
             'notion_api_key': args.get("notion_api_key"),
             'language': args.get("language")
         }
-    
+
+    logger.debug(f"言語設定 @ main.py main() args.get直後", "ai", language=user_config["language"])
+
     # システムを初期化
     system = PicklesSystem(user_config=user_config, enable_history=args["history"])
     
@@ -342,7 +344,8 @@ def main() -> None:
                analysis=args["analysis"], 
                delivery=delivery_str, 
                source=args["source"],
-               days=args["days"])
+               days=args["days"],
+               language=args['language'])
     
     if args["schedule"]:
         # スケジュール実行モード
@@ -353,7 +356,8 @@ def main() -> None:
             data_source=args["source"],
             analysis_type=args["analysis"],
             delivery_methods=args["delivery"],
-            days=args["days"]
+            days=args["days"],
+            language=args["language"]
         )
         
         # 実行結果をログ出力
