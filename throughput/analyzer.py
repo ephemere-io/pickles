@@ -36,6 +36,7 @@ class DocumentAnalyzer:
     def analyze_documents(self, 
                          raw_data: List[Dict[str, str]], 
                          analysis_type: str = AnalysisTypes.DOMI,
+                         language: str = None,
                          apply_filters: bool = True) -> Dict[str, str]:
         """ドキュメントを総合的に分析"""
         
@@ -47,7 +48,7 @@ class DocumentAnalyzer:
         stats = self._generate_statistics(raw_data, filtered_data)
         
         # AI分析実行
-        insights = self._generate_insights(filtered_data, analysis_type)
+        insights = self._generate_insights(filtered_data, analysis_type, language)
         
         return {
             "statistics": stats,
@@ -96,7 +97,7 @@ class DocumentAnalyzer:
         
         return f"取得データ数: {raw_count}件、フィルタ後: {filtered_count}件\n平均文字数: {avg_length}文字"
     
-    def _generate_insights(self, data: List[Dict[str, str]], analysis_type: str, language: str = "日本語") -> str:
+    def _generate_insights(self, data: List[Dict[str, str]], analysis_type: str, language: str) -> str:
         """AI分析を実行してインサイトを生成"""
         if not data:
             return "分析対象のデータがありません。"
@@ -119,6 +120,8 @@ class DocumentAnalyzer:
             # 単一メッセージとして送信
             messages = [{"role": "user", "content": prompt}]
         
+        logger.debug("作成したプロンプト", "ai", prompt)
+
         # AI分析実行
         try:
             logger.start("AI APIリクエスト送信", "ai", 
@@ -209,7 +212,7 @@ class DocumentAnalyzer:
         
         return "\n\n".join(formatted_items)
     
-    def _create_analysis_prompt(self, formatted_data: str, analysis_type: str, language: str = "日本語") -> str:
+    def _create_analysis_prompt(self, formatted_data: str, analysis_type: str, language: str) -> str:
         """分析タイプに応じたプロンプトを作成"""
         if analysis_type == AnalysisTypes.DOMI:
             return DomiPrompts.create_prompt(formatted_data, self._user_name, language)
