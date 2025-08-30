@@ -30,6 +30,8 @@ class PicklesSystem:
         } if user_config and user_config.get('email_to') else None
         
         user_name = user_config.get('user_name') if user_config else None
+
+        language = user_config.get('language') if user_config else None
         
         self._notion_input = NotionInput(api_key=notion_api_key)
         self._analyzer = DocumentAnalyzer(enable_history=enable_history, user_name=user_name)
@@ -40,6 +42,7 @@ class PicklesSystem:
                     data_source: str = "notion",
                     analysis_type: str = "comprehensive",
                     delivery_methods: List[str] = None,
+                    language: str = "日本語",
                     days: int = 7) -> Dict[str, str]:
         """分析を実行してレポートを生成・配信"""
         
@@ -66,6 +69,7 @@ class PicklesSystem:
             analysis_result = self._analyzer.analyze_documents(
                 raw_data, 
                 analysis_type=analysis_type,
+                language=language,
                 apply_filters=True
             )
             logger.complete(f"{analysis_type}分析処理", "ai", analyzed_count=analysis_result['data_count'])

@@ -96,7 +96,7 @@ class DocumentAnalyzer:
         
         return f"取得データ数: {raw_count}件、フィルタ後: {filtered_count}件\n平均文字数: {avg_length}文字"
     
-    def _generate_insights(self, data: List[Dict[str, str]], analysis_type: str) -> str:
+    def _generate_insights(self, data: List[Dict[str, str]], analysis_type: str, language: str = "日本語") -> str:
         """AI分析を実行してインサイトを生成"""
         if not data:
             return "分析対象のデータがありません。"
@@ -108,14 +108,14 @@ class DocumentAnalyzer:
         if self._enable_history and self._history:
             logger.info("過去の分析履歴を含めてAI分析を実行", "ai", analysis_type=analysis_type)
             # プロンプト作成
-            prompt = self._create_analysis_prompt(formatted_data, analysis_type)
+            prompt = self._create_analysis_prompt(formatted_data, analysis_type, language)
             # 履歴を含むメッセージ配列を取得
             messages = self._history.get_conversation_history(analysis_type, prompt)
             logger.debug("履歴メッセージ構成完了", "ai", message_count=len(messages))
         else:
-            logger.info("履歴なしで新規AI分析を実行", "ai", analysis_type=analysis_type)
+            logger.info("履歴なしで新規AI分析を実行", "ai", analysis_type=analysis_type, language=language)
             # プロンプト作成
-            prompt = self._create_analysis_prompt(formatted_data, analysis_type)
+            prompt = self._create_analysis_prompt(formatted_data, analysis_type, language)
             # 単一メッセージとして送信
             messages = [{"role": "user", "content": prompt}]
         
@@ -209,12 +209,12 @@ class DocumentAnalyzer:
         
         return "\n\n".join(formatted_items)
     
-    def _create_analysis_prompt(self, formatted_data: str, analysis_type: str) -> str:
+    def _create_analysis_prompt(self, formatted_data: str, analysis_type: str, language: str = "日本語") -> str:
         """分析タイプに応じたプロンプトを作成"""
         if analysis_type == AnalysisTypes.DOMI:
-            return DomiPrompts.create_prompt(formatted_data, self._user_name)
+            return DomiPrompts.create_prompt(formatted_data, self._user_name, language)
         elif analysis_type == AnalysisTypes.AGA:
-            return AgaPrompts.create_prompt(formatted_data, self._user_name)
+            return AgaPrompts.create_prompt(formatted_data, self._user_name, language)
         else:
             # フォールバック用の基本プロンプト
             user_prefix = f"ユーザー「{self._user_name}」さんの" if self._user_name else ""
