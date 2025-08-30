@@ -36,7 +36,7 @@ class PicklesSystem:
 
 
         self._notion_input = NotionInput(api_key=notion_api_key)
-        self._analyzer = DocumentAnalyzer(enable_history=enable_history, user_name=user_name)
+        self._analyzer = DocumentAnalyzer(enable_history=enable_history, user_name=user_name, language=language)
         self._delivery = ReportDelivery(email_config=email_config)
         # グローバルloggerインスタンスを使用
         
@@ -118,7 +118,8 @@ class PicklesSystem:
             "schedule": False,
             "user_name": None,
             "email_to": None,
-            "notion_api_key": None
+            "notion_api_key": None,
+            "language": None
         }
         
         parsed_args = default_args.copy()
@@ -183,6 +184,9 @@ class PicklesSystem:
             elif arg == CommandArgs.NOTION_API_KEY and i + 1 < len(args):
                 parsed_args["notion_api_key"] = args[i + 1]
                 i += 1
+            elif arg == CommandArgs.LANGUAGE and i + 1 < len(args):
+                parsed_args["language"] = args[i + 1]
+                i += 1
             
             i += 1
         
@@ -227,7 +231,8 @@ def parse_command_args(args: List[str]) -> Dict[str, any]:
         "schedule": False,
         "user_name": None,
         "email_to": None,
-        "notion_api_key": None
+        "notion_api_key": None,
+        "language": None
     }
     
     parsed_args = default_args.copy()
@@ -292,6 +297,9 @@ def parse_command_args(args: List[str]) -> Dict[str, any]:
         elif arg == CommandArgs.NOTION_API_KEY and i + 1 < len(args):
             parsed_args["notion_api_key"] = args[i + 1]
             i += 1
+        elif arg == CommandArgs.LANGUAGE and i + 1 < len(args):
+            parsed_args["language"] = args[i + 1]
+            i += 1
         
         i += 1
     
@@ -311,11 +319,12 @@ def main() -> None:
     
     # ユーザー設定の構築
     user_config = None
-    if args.get("user_name") or args.get("email_to") or args.get("notion_api_key"):
+    if args.get("user_name") or args.get("email_to") or args.get("notion_api_key") or args.get("language"):
         user_config = {
             'user_name': args.get("user_name"),
             'email_to': args.get("email_to"),
-            'notion_api_key': args.get("notion_api_key")
+            'notion_api_key': args.get("notion_api_key"),
+            'language': args.get("language")
         }
     
     # システムを初期化
