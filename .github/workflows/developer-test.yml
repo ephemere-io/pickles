@@ -73,7 +73,7 @@ jobs:
         GOOGLE_APPLICATION_CREDENTIALS: "service_account_key.json"
       run: |
         # 環境変数から設定を取得
-        SPREADSHEET_ID="${{ secrets.SPREADSHEET_ID_DEV }}"
+        SPREADSHEET_ID_DEV="${{ secrets.SPREADSHEET_ID_DEV }}"
         ANALYSIS="${{ github.event.inputs.analysis_type || 'domi' }}"
         DELIVERY="${{ github.event.inputs.delivery_method || 'email_html' }}"
         DAYS="${{ github.event.inputs.days_back || '7' }}"
