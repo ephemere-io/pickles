@@ -73,7 +73,9 @@ class GoogleSheetsReader:
                         'user_name': row[2].strip() if row[2] else f'User {i-1}',
                         'language' : row[3].strip() if row[3] else '日本語',
                     }
-                    
+
+                    logger.debug(f"言語設定 @ read_spreadsheet_and_execute_dev.py, read_user_data", "ai", language=user_data['language'])
+
                     # 必須フィールドのバリデーション
                     if user_data['email_to'] and user_data['notion_api_key']:
                         # デバッグ: APIキーの詳細を表示（最初と最後の文字のみ）
@@ -122,6 +124,8 @@ def execute_pickles_for_user(user_data: Dict[str, str], analysis_type: str, deli
         ]
         
         logger.start(f"{user_data['user_name']}のPickles実行", "execution")
+
+        logger.debug(f"言語設定 @ read_spreadsheet_and_execute_dev.py, execute_pickles_for_user", "ai", language=user_data['language'])
         
         # Picklesを実行（元のcmdを使用）
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)

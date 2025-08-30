@@ -32,7 +32,9 @@ class PicklesSystem:
         user_name = user_config.get('user_name') if user_config else None
 
         language = user_config.get('language') if user_config else None
-        
+        logger.debug(f"言語設定 @ main.py _init_", "ai", language=language)
+
+
         self._notion_input = NotionInput(api_key=notion_api_key)
         self._analyzer = DocumentAnalyzer(enable_history=enable_history, user_name=user_name)
         self._delivery = ReportDelivery(email_config=email_config)
@@ -42,10 +44,12 @@ class PicklesSystem:
                     data_source: str = "notion",
                     analysis_type: str = "comprehensive",
                     delivery_methods: List[str] = None,
-                    language: str = "日本語",
+                    language: str = None,
                     days: int = 7) -> Dict[str, str]:
         """分析を実行してレポートを生成・配信"""
         
+        logger.debug(f"言語設定 @ main.py run_analysis", "ai", language=language)
+
         if delivery_methods is None:
             delivery_methods = ["console"]
         
@@ -69,10 +73,12 @@ class PicklesSystem:
             analysis_result = self._analyzer.analyze_documents(
                 raw_data, 
                 analysis_type=analysis_type,
-                apply_filters=True
+                apply_filters=True,
+                language=language
             )
             logger.complete(f"{analysis_type}分析処理", "ai", analyzed_count=analysis_result['data_count'])
-            
+            logger.debug(f"言語設定 @ main.py, run_analysis内 analysis_result以後", "ai", language=language)
+
             # レポート配信
             logger.start("レポート配信処理", "system", methods=delivery_methods)
             delivery_results = self._delivery.deliver_report(
