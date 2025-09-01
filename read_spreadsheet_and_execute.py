@@ -46,7 +46,8 @@ class GoogleSheetsReader:
         A列: EMAIL_TO
         B列: NOTION_API_KEY  
         C列: user name
-        D列: その他（オプション）
+        D列: LANGUAGE
+        E列: その他（オプション）
         """
         try:
             # スプレッドシートのデータを取得
@@ -69,7 +70,8 @@ class GoogleSheetsReader:
                     user_data = {
                         'email_to': row[0].strip() if row[0] else '',
                         'notion_api_key': row[1].strip() if row[1] else '',
-                        'user_name': row[2].strip() if row[2] else f'User {i-1}'
+                        'user_name': row[2].strip() if row[2] else f'User {i-1}',
+                        'language' : row[3].strip() if row[3] else '日本語',
                     }
                     
                     # 必須フィールドのバリデーション
@@ -115,7 +117,8 @@ def execute_pickles_for_user(user_data: Dict[str, str], analysis_type: str, deli
             "--days", str(days),
             "--user-name", user_data['user_name'],
             "--email-to", user_data['email_to'],
-            "--notion-api-key", user_data['notion_api_key']
+            "--notion-api-key", user_data['notion_api_key'],
+            "--language", user_data['language']
         ]
         
         logger.start(f"{user_data['user_name']}のPickles実行", "execution")
