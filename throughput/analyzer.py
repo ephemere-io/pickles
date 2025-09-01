@@ -133,7 +133,7 @@ class DocumentAnalyzer:
                         message_count=len(messages))
             
             resp = self._client.responses.create(
-                model="o4-mini",
+                model="gpt-5",
                 reasoning={"effort": "high"},
                 input=messages,
                 max_output_tokens=50000
