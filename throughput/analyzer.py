@@ -124,7 +124,6 @@ class DocumentAnalyzer:
             messages = [{"role": "user", "content": prompt}]
 
         logger.debug(f"言語設定 @ analyser.py, _generate_insights", "ai", language=language)
-        logger.debug(f"作成したプロンプト: {prompt}")
 
         # AI分析実行
         try:
@@ -216,7 +215,7 @@ class DocumentAnalyzer:
         
         return "\n\n".join(formatted_items)
     
-    def _create_analysis_prompt(self, formatted_data: str, analysis_type: str, language: str) -> str:
+    def _create_analysis_prompt(self, formatted_data: str, analysis_type: str, language: str = "日本語") -> str:
 
         logger.debug(f"言語設定 @ analyser.py, _create_analysis_prompt", "ai", language=language)
 
