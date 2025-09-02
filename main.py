@@ -45,8 +45,18 @@ class PicklesSystem:
                     analysis_type: str = "comprehensive",
                     delivery_methods: List[str] = None,
                     language: str = None,
-                    days: int = 7) -> Dict[str, str]:
-        """分析を実行してレポートを生成・配信"""
+                    days: int = 7,
+                    include_month_context: bool = False) -> Dict[str, str]:
+        """分析を実行してレポートを生成・配信
+        
+        Args:
+            data_source: データソース
+            analysis_type: 分析タイプ
+            delivery_methods: 配信方法
+            language: 出力言語
+            days: 分析対象日数（通常は7日）
+            include_month_context: 30日間のコンテキストを含めるか
+        """
         
         logger.debug(f"言語設定 @ main.py run_analysis", "ai", language=language)
 
@@ -68,13 +78,24 @@ class PicklesSystem:
             
             logger.success("データ取得完了", "data", count=len(raw_data), source=data_source)
             
+            # 30日間コンテキストを含める場合
+            month_data = None
+            if include_month_context:
+                logger.start(f"{data_source}からの30日間データ取得", "data", days=30)
+                month_data = self._fetch_data(data_source, 30)
+                if month_data:
+                    logger.success("30日間データ取得完了", "data", count=len(month_data), source=data_source)
+                else:
+                    logger.warning("30日間データが見つかりません", "data", source=data_source)
+            
             # 分析実行
             logger.start(f"{analysis_type}分析処理", "ai", data_count=len(raw_data))
             analysis_result = self._analyzer.analyze_documents(
                 raw_data, 
                 analysis_type=analysis_type,
                 apply_filters=True,
-                language=language
+                language=language,
+                month_data=month_data
             )
             logger.complete(f"{analysis_type}分析処理", "ai", analyzed_count=analysis_result['data_count'])
             logger.debug(f"言語設定 @ main.py, run_analysis内 analysis_result以後", "ai", language=language)
@@ -119,7 +140,8 @@ class PicklesSystem:
             "user_name": None,
             "email_to": None,
             "notion_api_key": None,
-            "language": None
+            "language": None,
+            "month_context": False
         }
         
         parsed_args = default_args.copy()
@@ -187,6 +209,8 @@ class PicklesSystem:
             elif arg == CommandArgs.LANGUAGE and i + 1 < len(args):
                 parsed_args["language"] = args[i + 1]
                 i += 1
+            elif arg == "--month-context":
+                parsed_args["month_context"] = True
             
             i += 1
         
@@ -232,7 +256,8 @@ def parse_command_args(args: List[str]) -> Dict[str, any]:
         "user_name": None,
         "email_to": None,
         "notion_api_key": None,
-        "language": None
+        "language": None,
+        "month_context": False
     }
     
     parsed_args = default_args.copy()
@@ -300,6 +325,8 @@ def parse_command_args(args: List[str]) -> Dict[str, any]:
         elif arg == CommandArgs.LANGUAGE and i + 1 < len(args):
             parsed_args["language"] = args[i + 1]
             i += 1
+        elif arg == "--month-context":
+            parsed_args["month_context"] = True
         
         i += 1
     
@@ -345,7 +372,8 @@ def main() -> None:
                delivery=delivery_str, 
                source=args["source"],
                days=args["days"],
-               language=args['language'])
+               language=args['language'],
+               month_context=args['month_context'])
     
     if args["schedule"]:
         # スケジュール実行モード
@@ -357,7 +385,8 @@ def main() -> None:
             analysis_type=args["analysis"],
             delivery_methods=args["delivery"],
             days=args["days"],
-            language=args["language"]
+            language=args["language"],
+            include_month_context=args["month_context"]
         )
         
         # 実行結果をログ出力

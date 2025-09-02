@@ -55,6 +55,7 @@ class UsagePrinter:
   {CommandArgs.EMAIL_TO}      送信先メールアドレス (マルチユーザー対応)
   {CommandArgs.NOTION_API_KEY} Notion APIキー (マルチユーザー対応)
   {CommandArgs.LANGUAGE}      言語設定 (マルチユーザー対応)
+  --month-context             30日間のコンテキストを含めた分析を実行
   {CommandArgs.HELP}          このヘルプを表示
 
 例:
@@ -64,6 +65,8 @@ class UsagePrinter:
   python main.py {CommandArgs.DELIVERY} {DeliveryMethods.CONSOLE},{DeliveryMethods.FILE_HTML} {CommandArgs.DAYS} 14
   python main.py {CommandArgs.HISTORY} off                                      # 履歴なしで分析
   python main.py {CommandArgs.SCHEDULE}
+  python main.py --month-context                                                # 30日間のコンテキストで分析
+  python main.py {CommandArgs.ANALYSIS} {AnalysisTypes.DOMI} --month-context    # DOMI分析を30日間コンテキストで実行
   
 マルチユーザー例:
   python main.py {CommandArgs.USER_NAME} "田中太郎" {CommandArgs.EMAIL_TO} "tanaka@example.com" {CommandArgs.NOTION_API_KEY} "secret_xxx"
