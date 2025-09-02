@@ -141,6 +141,52 @@ class DocumentAnalyzer:
                 f"取得データ数: {month_raw_count}件、フィルタ後: {month_filtered_count}件\n"
                 f"平均文字数: {month_avg_length}文字")
     
+    def _parse_api_response(self, data_dict: dict) -> str:
+        """APIレスポンスを統一的にパースしてテキストを抽出"""
+        if "output" not in data_dict:
+            raise RuntimeError("レスポンスに'output'キーが存在しません")
+        
+        logger.debug("アウトプットアイテム解析", "ai", item_count=len(data_dict['output']))
+        
+        # 利用可能なタイプをログ出力
+        for i, item in enumerate(data_dict["output"]):
+            logger.debug(f"アイテム{i}詳細", "ai", type=item.get('type'), keys=list(item.keys()))
+        
+        # 1. まず 'text' タイプを探す（直接テキスト）
+        text_block = next(
+            (item for item in data_dict["output"] if item.get("type") == "text"),
+            None
+        )
+        
+        if text_block:
+            logger.debug("テキストブロック発見", "ai", content_keys=list(text_block.keys()))
+            # text タイプの場合は直接 text フィールドから取得
+            if "text" in text_block:
+                return text_block["text"]
+            else:
+                raise RuntimeError("テキストブロックに'text'フィールドが含まれていません")
+        
+        # 2. 'message' タイプを探す（ネストしたコンテンツ）
+        message_block = next(
+            (item for item in data_dict["output"] if item.get("type") == "message"),
+            None
+        )
+        
+        if message_block:
+            logger.debug("メッセージブロック発見", "ai", content_count=len(message_block.get('content', [])))
+            
+            if not message_block.get("content") or len(message_block["content"]) == 0:
+                raise RuntimeError("メッセージブロックにコンテンツが含まれていません")
+            
+            # content[0].text から取得
+            return message_block["content"][0].get("text", "")
+        
+        # 3. その他のタイプを探す（フォールバック）
+        available_types = [item.get("type") for item in data_dict.get("output", [])]
+        error_msg = "テキストまたはメッセージブロックが見つかりません"
+        logger.error(error_msg, "ai", available_types=available_types)
+        raise RuntimeError(f"{error_msg}。利用可能なタイプ: {available_types}")
+
     def _generate_insights(self, data: List[Dict[str, str]], analysis_type: str, language: str = "日本語") -> str:
         """AI分析を実行してインサイトを生成"""
         if not data:
@@ -184,36 +230,9 @@ class DocumentAnalyzer:
             data_dict = resp.to_dict()
             logger.debug("レスポンス構造解析", "ai", response_keys=list(data_dict.keys()))
             
-            # レスポンス構造をより詳細にログ出力
-            if "output" in data_dict:
-                logger.debug("アウトプットアイテム解析", "ai", item_count=len(data_dict['output']))
-                for i, item in enumerate(data_dict["output"]):
-                    logger.debug(f"アイテム{i}詳細", "ai", type=item.get('type'), keys=list(item.keys()))
-            else:
-                logger.error("レスポンスに'output'キーが存在しません", "ai", response=data_dict)
+            # 統一的なレスポンスパース処理を使用
+            insights = self._parse_api_response(data_dict)
             
-            message_block = next(
-                (item for item in data_dict["output"] if item.get("type") == "message"),
-                None
-            )
-            
-            if not message_block:
-                # より詳細なエラー情報を提供
-                available_types = [item.get("type") for item in data_dict.get("output", [])]
-                error_msg = f"メッセージブロックが見つかりません"
-                logger.error(error_msg, "ai", 
-                           available_types=available_types,
-                           response_keys=list(data_dict.keys()))
-                raise RuntimeError(f"{error_msg}。利用可能なタイプ: {available_types}")
-            
-            logger.debug("メッセージブロック発見", "ai", content_count=len(message_block.get('content', [])))
-            
-            if not message_block.get("content") or len(message_block["content"]) == 0:
-                error_msg = "メッセージブロックにコンテンツが含まれていません"
-                logger.error(error_msg, "ai", message_block_keys=list(message_block.keys()))
-                raise RuntimeError(error_msg)
-            
-            insights = message_block["content"][0].get("text", "")
             logger.complete("AI分析処理", "ai", result_length=len(insights))
             
             # 履歴に保存
@@ -280,32 +299,15 @@ class DocumentAnalyzer:
             data_dict = resp.to_dict()
             logger.debug("レスポンス構造解析", "ai", response_keys=list(data_dict.keys()))
             
-            # レスポンス構造をより詳細にログ出力
-            if "output" in data_dict:
-                logger.debug("アウトプットアイテム解析", "ai", item_count=len(data_dict['output']))
-                for i, item in enumerate(data_dict["output"]):
-                    logger.debug(f"アイテム{i}詳細", "ai", type=item.get('type'), keys=list(item.keys()))
-                    if item.get('type') == 'text' and 'text' in item:
-                        insights = item['text']
-                        logger.debug("インサイト抽出成功", "ai", length=len(insights))
-                        
-                        # 履歴に保存
-                        if self._enable_history and self._history:
-                            week_summary = f"{len(week_data)}件のデータ（平均{sum(len(item.get('text', '')) for item in week_data) // len(week_data)}文字）"
-                            month_summary = f"{len(month_data)}件のデータ（平均{sum(len(item.get('text', '')) for item in month_data) // len(month_data)}文字）"
-                            self._history.save_analysis(analysis_type, f"週間: {week_summary}, 月間: {month_summary}", insights)
-                            logger.debug("分析結果を履歴に保存", "ai")
-                        
-                        return insights
+            # 統一的なレスポンスパース処理を使用
+            insights = self._parse_api_response(data_dict)
             
-            logger.error("レスポンスからインサイトを抽出できませんでした", "ai", 
-                        response_structure=str(data_dict)[:500])
+            logger.complete("AI分析処理（30日間コンテキスト付き）", "ai", result_length=len(insights))
             
-            # 履歴に保存（インサイトが取得できなかった場合も）
+            # 履歴に保存
             if self._enable_history and self._history:
                 week_summary = f"{len(week_data)}件のデータ（平均{sum(len(item.get('text', '')) for item in week_data) // len(week_data)}文字）"
                 month_summary = f"{len(month_data)}件のデータ（平均{sum(len(item.get('text', '')) for item in month_data) // len(month_data)}文字）"
-                insights = "分析結果の取得に失敗しました。"
                 self._history.save_analysis(analysis_type, f"週間: {week_summary}, 月間: {month_summary}", insights)
                 logger.debug("分析結果を履歴に保存", "ai")
             
@@ -376,6 +378,3 @@ class DocumentAnalyzer:
             base_prompt += f"【過去30日間】\n{month_data}\n\n"
             base_prompt += f"【直近7日間】\n{week_data}\n\n"
             return base_prompt + "30日間の傾向と直近7日間の特徴を比較分析してレポートを作成してください。"
-
-
- 
