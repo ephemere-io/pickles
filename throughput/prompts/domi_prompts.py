@@ -106,13 +106,13 @@ class DomiPrompts:
             return cls.ANALYSIS_PROMPT.format(language=language) + cls.BASE_TEMPLATE.format(formatted_data=formatted_data)
     
     @classmethod
-    def create_context_prompt(cls, week_data: str, month_data: str, user_name: str = None, language: str = "English") -> str:
-        """30日間コンテキスト付きDOMI用分析プロンプトを生成"""
+    def create_context_prompt(cls, week_data: str, context_data: str, user_name: str = None, language: str = "English") -> str:
+        """コンテキスト付きDOMI用分析プロンプトを生成"""
         # ユーザー名が指定されている場合はパーソナライズ
         if user_name:
             personalized_prompt = cls.ANALYSIS_PROMPT_WITH_CONTEXT.format(
                 language=language,
-                month_data=month_data,
+                month_data=context_data,  # month_dataをcontext_dataとして使用
                 week_data=week_data
             ).replace(
                 "私は日々、日誌を書いています。",
@@ -131,6 +131,6 @@ class DomiPrompts:
         else:
             return cls.ANALYSIS_PROMPT_WITH_CONTEXT.format(
                 language=language,
-                month_data=month_data,
+                month_data=context_data,  # month_dataをcontext_dataとして使用
                 week_data=week_data
             )

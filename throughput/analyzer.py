@@ -39,15 +39,15 @@ class DocumentAnalyzer:
                          analysis_type: str = AnalysisTypes.DOMI,
                          language: str = None,
                          apply_filters: bool = True,
-                         month_data: List[Dict[str, str]] = None) -> Dict[str, str]:
+                         context_data: List[Dict[str, str]] = None) -> Dict[str, str]:
         """ドキュメントを総合的に分析
         
         Args:
-            raw_data: 分析対象のデータ（通常は7日間）
+            raw_data: 分析対象のデータ（通常は直近7日間）
             analysis_type: 分析タイプ
             language: 出力言語
             apply_filters: フィルタリングを適用するか
-            month_data: 30日間のコンテキストデータ（オプション）
+            context_data: コンテキスト用データ（7日より長い期間のデータ、オプション）
         """
         
         logger.debug(f"言語設定 @ analyser.py, analyze_document内", "ai", language=language)
@@ -55,17 +55,17 @@ class DocumentAnalyzer:
         # フィルタリングは一旦無効化
         # filtered_data = self._filter_data(raw_data) if apply_filters else raw_data
         filtered_data = raw_data
-        filtered_month_data = month_data if month_data else None
+        filtered_context_data = context_data if context_data else None
 
         # 統計情報生成
-        if filtered_month_data:
-            stats = self._generate_context_statistics(raw_data, filtered_data, month_data, filtered_month_data)
+        if filtered_context_data:
+            stats = self._generate_context_statistics(raw_data, filtered_data, context_data, filtered_context_data)
         else:
             stats = self._generate_statistics(raw_data, filtered_data)
         
         # AI分析実行
-        if filtered_month_data:
-            insights = self._generate_context_insights(filtered_data, filtered_month_data, analysis_type, language)
+        if filtered_context_data:
+            insights = self._generate_context_insights(filtered_data, filtered_context_data, analysis_type, language)
         else:
             insights = self._generate_insights(filtered_data, analysis_type, language)
         
@@ -73,7 +73,7 @@ class DocumentAnalyzer:
             "statistics": stats,
             "insights": insights,
             "data_count": len(filtered_data),
-            "month_data_count": len(filtered_month_data) if filtered_month_data else 0
+            "context_data_count": len(filtered_context_data) if filtered_context_data else 0
         }
     
     def _filter_data(self, data: List[Dict[str, str]]) -> List[Dict[str, str]]:
@@ -118,28 +118,31 @@ class DocumentAnalyzer:
         return f"取得データ数: {raw_count}件、フィルタ後: {filtered_count}件\n平均文字数: {avg_length}文字"
     
     def _generate_context_statistics(self, week_raw: List[Dict[str, str]], week_filtered: List[Dict[str, str]], 
-                                    month_raw: List[Dict[str, str]], month_filtered: List[Dict[str, str]]) -> str:
-        """30日間コンテキスト付き統計情報を生成"""
+                                    context_raw: List[Dict[str, str]], context_filtered: List[Dict[str, str]]) -> str:
+        """コンテキスト付き統計情報を生成"""
         week_raw_count = len(week_raw)
         week_filtered_count = len(week_filtered)
-        month_raw_count = len(month_raw)
-        month_filtered_count = len(month_filtered)
+        context_raw_count = len(context_raw)
+        context_filtered_count = len(context_filtered)
+        
+        # コンテキスト期間の日数を計算
+        context_days = len(set(item.get('date', '')[:10] for item in context_raw if item.get('date')))
         
         if week_filtered_count == 0:
-            return f"直近7日間: 取得データ数: {week_raw_count}件、フィルタ後: 0件（分析対象なし）\n過去30日間: 取得データ数: {month_raw_count}件、フィルタ後: {month_filtered_count}件"
+            return f"直近7日間: 取得データ数: {week_raw_count}件、フィルタ後: 0件（分析対象なし）\n過去{context_days}日間: 取得データ数: {context_raw_count}件、フィルタ後: {context_filtered_count}件"
         
         week_total_length = sum(len(item.get("text", "")) for item in week_filtered)
         week_avg_length = week_total_length // week_filtered_count if week_filtered_count > 0 else 0
         
-        month_total_length = sum(len(item.get("text", "")) for item in month_filtered)
-        month_avg_length = month_total_length // month_filtered_count if month_filtered_count > 0 else 0
+        context_total_length = sum(len(item.get("text", "")) for item in context_filtered)
+        context_avg_length = context_total_length // context_filtered_count if context_filtered_count > 0 else 0
         
         return (f"【直近7日間】\n"
                 f"取得データ数: {week_raw_count}件、フィルタ後: {week_filtered_count}件\n"
                 f"平均文字数: {week_avg_length}文字\n\n"
-                f"【過去30日間】\n"
-                f"取得データ数: {month_raw_count}件、フィルタ後: {month_filtered_count}件\n"
-                f"平均文字数: {month_avg_length}文字")
+                f"【過去{context_days}日間】\n"
+                f"取得データ数: {context_raw_count}件、フィルタ後: {context_filtered_count}件\n"
+                f"平均文字数: {context_avg_length}文字")
     
     def _parse_api_response(self, data_dict: dict) -> str:
         """APIレスポンスを統一的にパースしてテキストを抽出"""
@@ -253,28 +256,28 @@ class DocumentAnalyzer:
                         history_enabled=self._enable_history)
             raise AnalysisError(f"AI分析エラー: {e}")
     
-    def _generate_context_insights(self, week_data: List[Dict[str, str]], month_data: List[Dict[str, str]], 
+    def _generate_context_insights(self, week_data: List[Dict[str, str]], context_data: List[Dict[str, str]], 
                                   analysis_type: str, language: str = "日本語") -> str:
-        """30日間コンテキスト付きAI分析を実行してインサイトを生成"""
-        if not week_data or not month_data:
+        """コンテキスト付きAI分析を実行してインサイトを生成"""
+        if not week_data or not context_data:
             return "分析対象のデータがありません。"
         
         # データをフォーマット
         formatted_week_data = self._format_data_for_analysis(week_data)
-        formatted_month_data = self._format_data_for_analysis(month_data)
+        formatted_context_data = self._format_data_for_analysis(context_data)
         
         # 履歴を使用する場合
         if self._enable_history and self._history:
-            logger.info("過去の分析履歴を含めて30日間コンテキスト付きAI分析を実行", "ai", analysis_type=analysis_type)
+            logger.info("過去の分析履歴を含めてコンテキスト付きAI分析を実行", "ai", analysis_type=analysis_type)
             # プロンプト作成
-            prompt = self._create_context_analysis_prompt(formatted_week_data, formatted_month_data, analysis_type, language)
+            prompt = self._create_context_analysis_prompt(formatted_week_data, formatted_context_data, analysis_type, language)
             # 履歴を含むメッセージ配列を取得
             messages = self._history.get_conversation_history(analysis_type, prompt)
             logger.debug("履歴メッセージ構成完了", "ai", message_count=len(messages))
         else:
-            logger.info("履歴なしで新規30日間コンテキスト付きAI分析を実行", "ai", analysis_type=analysis_type, language=language)
+            logger.info("履歴なしで新規コンテキスト付きAI分析を実行", "ai", analysis_type=analysis_type, language=language)
             # プロンプト作成
-            prompt = self._create_context_analysis_prompt(formatted_week_data, formatted_month_data, analysis_type, language)
+            prompt = self._create_context_analysis_prompt(formatted_week_data, formatted_context_data, analysis_type, language)
             # 単一メッセージとして送信
             messages = [{"role": "user", "content": prompt}]
 
@@ -282,9 +285,9 @@ class DocumentAnalyzer:
 
         # AI分析実行
         try:
-            logger.start("AI APIリクエスト送信（30日間コンテキスト付き）", "ai", 
+            logger.start("AI APIリクエスト送信（コンテキスト付き）", "ai", 
                         week_data_length=len(formatted_week_data),
-                        month_data_length=len(formatted_month_data), 
+                        context_data_length=len(formatted_context_data), 
                         max_tokens=50000, 
                         message_count=len(messages))
             
@@ -295,31 +298,32 @@ class DocumentAnalyzer:
                 max_output_tokens=50000
             )
             
-            logger.success("AI APIレスポンス受信（30日間コンテキスト付き）", "ai")
+            logger.success("AI APIレスポンス受信（コンテキスト付き）", "ai")
             data_dict = resp.to_dict()
             logger.debug("レスポンス構造解析", "ai", response_keys=list(data_dict.keys()))
             
             # 統一的なレスポンスパース処理を使用
             insights = self._parse_api_response(data_dict)
             
-            logger.complete("AI分析処理（30日間コンテキスト付き）", "ai", result_length=len(insights))
+            logger.complete("AI分析処理（コンテキスト付き）", "ai", result_length=len(insights))
             
             # 履歴に保存
             if self._enable_history and self._history:
                 week_summary = f"{len(week_data)}件のデータ（平均{sum(len(item.get('text', '')) for item in week_data) // len(week_data)}文字）"
-                month_summary = f"{len(month_data)}件のデータ（平均{sum(len(item.get('text', '')) for item in month_data) // len(month_data)}文字）"
-                self._history.save_analysis(analysis_type, f"週間: {week_summary}, 月間: {month_summary}", insights)
+                context_days = len(set(item.get('date', '')[:10] for item in context_data if item.get('date')))
+                context_summary = f"{len(context_data)}件のデータ（{context_days}日間、平均{sum(len(item.get('text', '')) for item in context_data) // len(context_data)}文字）"
+                self._history.save_analysis(analysis_type, f"週間: {week_summary}, コンテキスト: {context_summary}", insights)
                 logger.debug("分析結果を履歴に保存", "ai")
             
             return insights
             
         except Exception as e:
             # 詳細なエラー情報を含める
-            logger.error("AI分析処理でエラーが発生（30日間コンテキスト付き）", "ai",
+            logger.error("AI分析処理でエラーが発生（コンテキスト付き）", "ai",
                         error_type=type(e).__name__,
                         error_message=str(e),
                         week_data_length=len(formatted_week_data),
-                        month_data_length=len(formatted_month_data),
+                        context_data_length=len(formatted_context_data),
                         analysis_type=analysis_type,
                         history_enabled=self._enable_history)
             raise AnalysisError(f"AI分析エラー: {e}")
@@ -361,19 +365,19 @@ class DocumentAnalyzer:
             base_prompt = f"以下の{user_prefix}データを分析してください：\n\n{formatted_data}\n\n"
             return base_prompt + "このデータの特徴と傾向を分析してレポートを作成してください。"
     
-    def _create_context_analysis_prompt(self, week_data: str, month_data: str, analysis_type: str, language: str = "日本語") -> str:
+    def _create_context_analysis_prompt(self, week_data: str, context_data: str, analysis_type: str, language: str = "日本語") -> str:
 
         logger.debug(f"言語設定 @ analyser.py, _create_context_analysis_prompt", "ai", language=language)
 
-        """30日間コンテキスト付き分析タイプに応じたプロンプトを作成"""
+        """コンテキスト付き分析タイプに応じたプロンプトを作成"""
         if analysis_type == AnalysisTypes.DOMI:
-            return DomiPrompts.create_context_prompt(week_data, month_data, self._user_name, language)
+            return DomiPrompts.create_context_prompt(week_data, context_data, self._user_name, language)
         elif analysis_type == AnalysisTypes.AGA:
-            return AgaPrompts.create_context_prompt(week_data, month_data, self._user_name, language)
+            return AgaPrompts.create_context_prompt(week_data, context_data, self._user_name, language)
         else:
             # フォールバック用の基本プロンプト
             user_prefix = f"ユーザー「{self._user_name}」さんの" if self._user_name else ""
-            base_prompt = f"以下の{user_prefix}30日間のデータと直近7日間のデータを分析してください：\n\n"
-            base_prompt += f"【過去30日間】\n{month_data}\n\n"
+            base_prompt = f"以下の{user_prefix}コンテキストデータと直近7日間のデータを分析してください：\n\n"
+            base_prompt += f"【コンテキスト期間】\n{context_data}\n\n"
             base_prompt += f"【直近7日間】\n{week_data}\n\n"
-            return base_prompt + "30日間の傾向と直近7日間の特徴を比較分析してレポートを作成してください。"
+            return base_prompt + "コンテキスト期間の傾向と直近7日間の特徴を比較分析してレポートを作成してください。"
