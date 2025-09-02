@@ -92,7 +92,8 @@ class PicklesSystem:
                 
                 if not week_data:
                     logger.warning("直近7日間のデータが見つかりません", "data", source=data_source)
-                    week_data = context_data[-7:] if len(context_data) >= 7 else context_data
+                    # フォールバック: context_dataから直近7日分を正しく抽出
+                    week_data = self._extract_recent_days_from_context(context_data, 7)
                 
                 logger.success("直近7日間データ取得完了", "data", count=len(week_data), source=data_source)
             else:
@@ -157,6 +158,62 @@ class PicklesSystem:
             return self._notion_input.fetch_notion_documents(days)
         else:
             raise ValueError(f"未対応のデータソース: {data_source}")
+    
+    def _extract_recent_days_from_context(self, context_data: List[Dict[str, str]], days: int) -> List[Dict[str, str]]:
+        """コンテキストデータから直近N日分のデータを正しく抽出
+        
+        日付でソートし、最新のN日分のデータを返す。
+        日付が欠落している場合は除外する。
+        """
+        from datetime import datetime, timedelta
+        
+        # 日付が存在するデータのみをフィルタリング
+        data_with_dates = [d for d in context_data if d.get('date')]
+        
+        if not data_with_dates:
+            logger.warning("日付情報を持つデータがありません", "data")
+            return context_data[:days] if len(context_data) > days else context_data
+        
+        # 日付でソート（新しい順）
+        try:
+            sorted_data = sorted(
+                data_with_dates,
+                key=lambda x: datetime.strptime(x['date'], '%Y-%m-%d'),
+                reverse=True
+            )
+        except (ValueError, KeyError) as e:
+            logger.warning(f"日付のパース中にエラー: {e}", "data")
+            # フォールバック: 元の順序で最初のN件を返す
+            return data_with_dates[:days] if len(data_with_dates) > days else data_with_dates
+        
+        # 最新の日付を基準に、直近N日間の範囲を計算
+        if sorted_data:
+            try:
+                latest_date = datetime.strptime(sorted_data[0]['date'], '%Y-%m-%d')
+                cutoff_date = latest_date - timedelta(days=days-1)
+                
+                # 直近N日間のデータのみを抽出
+                recent_data = [
+                    d for d in sorted_data
+                    if datetime.strptime(d['date'], '%Y-%m-%d') >= cutoff_date
+                ]
+                
+                # 古い順（昇順）に並び替えて返す
+                recent_data.reverse()
+                
+                logger.info(f"コンテキストから{len(recent_data)}件の直近データを抽出", "data",
+                          latest_date=latest_date.strftime('%Y-%m-%d'),
+                          cutoff_date=cutoff_date.strftime('%Y-%m-%d'))
+                
+                return recent_data
+            except (ValueError, KeyError) as e:
+                logger.warning(f"日付範囲の計算中にエラー: {e}", "data")
+        
+        # 最終フォールバック: ソート済みデータの最初のN件を返す
+        result = sorted_data[:days] if len(sorted_data) > days else sorted_data
+        # 古い順（昇順）に並び替えて返す
+        result.reverse()
+        return result
     
     def _parse_command_args(self, args: List[str]) -> Dict[str, any]:
         """コマンドライン引数を解析"""
