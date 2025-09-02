@@ -369,8 +369,7 @@ class DocumentAnalyzer:
         if analysis_type == AnalysisTypes.DOMI:
             return DomiPrompts.create_context_prompt(week_data, month_data, self._user_name, language)
         elif analysis_type == AnalysisTypes.AGA:
-            # AGA用のコンテキストプロンプトも必要に応じて実装
-            return AgaPrompts.create_prompt(week_data, self._user_name, language)
+            return AgaPrompts.create_context_prompt(week_data, month_data, self._user_name, language)
         else:
             # フォールバック用の基本プロンプト
             user_prefix = f"ユーザー「{self._user_name}」さんの" if self._user_name else ""
