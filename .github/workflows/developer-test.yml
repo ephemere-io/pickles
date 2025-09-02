@@ -35,6 +35,11 @@ on:
         required: false
         default: false
         type: boolean
+      context_30days:
+        description: '30days Context'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   send-report:
@@ -77,6 +82,7 @@ jobs:
         ANALYSIS="${{ github.event.inputs.analysis_type || 'domi' }}"
         DELIVERY="${{ github.event.inputs.delivery_method || 'email_html' }}"
         DAYS="${{ github.event.inputs.days_back || '7' }}"
+        CONTEXT="${{ github.event.inputs.context_30days || 'false' }}"
         
         # 必須パラメータのチェック
         if [[ -z "$SPREADSHEET_ID_DEV" ]]; then
@@ -91,6 +97,7 @@ jobs:
           echo "Analysis Type: $ANALYSIS"
           echo "Delivery Method: $DELIVERY"
           echo "Days Back: $DAYS"
+          echo "30days Context: $CONTEXT"
           echo "Environment variables status:"
           echo "OPENAI_API_KEY: ${OPENAI_API_KEY:+SET}"
           echo "EMAIL_USER: ${EMAIL_USER:+SET}"
@@ -102,8 +109,12 @@ jobs:
         fi
         
         # Google Sheetsからマルチユーザー実行
-        uv run python read_spreadsheet_and_execute_dev.py \
-          --spreadsheet-id "$SPREADSHEET_ID_DEV" \
-          --analysis "$ANALYSIS" \
-          --delivery "$DELIVERY" \
-          --days "$DAYS"
+        CMD="uv run python read_spreadsheet_and_execute_dev.py --spreadsheet-id \"$SPREADSHEET_ID_DEV\" --analysis \"$ANALYSIS\" --delivery \"$DELIVERY\" --days \"$DAYS\""
+        
+        # 30days Contextが有効な場合、--month-contextフラグを追加
+        if [[ "$CONTEXT" == "true" ]]; then
+          CMD="$CMD --month-context"
+        fi
+        
+        # コマンドを実行
+        eval $CMD
