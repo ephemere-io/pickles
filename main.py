@@ -45,8 +45,7 @@ class PicklesSystem:
                     analysis_type: str = "comprehensive",
                     delivery_methods: List[str] = None,
                     language: str = None,
-                    days: int = 7,
-                    include_month_context: bool = False) -> Dict[str, str]:
+                    days: int = 7) -> Dict[str, str]:
         """分析を実行してレポートを生成・配信
         
         Args:
@@ -54,8 +53,7 @@ class PicklesSystem:
             analysis_type: 分析タイプ
             delivery_methods: 配信方法
             language: 出力言語
-            days: 分析対象日数（通常は7日）
-            include_month_context: 30日間のコンテキストを含めるか
+            days: 分析対象日数（最小7日）
         """
         
         logger.debug(f"言語設定 @ main.py run_analysis", "ai", language=language)
@@ -66,37 +64,70 @@ class PicklesSystem:
         # バリデーション
         if data_source != DataSources.NOTION:
             return {"error": f"未対応のデータソース: {data_source}"}
+        
+        # daysの最小値チェック
+        if days < 7:
+            logger.error("分析日数が最小値未満", "system", days=days, minimum=7)
+            return {"error": "分析日数は最低7日必要です"}
 
         try:
-            # データ取得
-            logger.start(f"{data_source}からのデータ取得", "data", days=days)
-            raw_data = self._fetch_data(data_source, days)
+            # コンテキスト用データ取得（days > 7の場合）
+            context_data = None
+            week_data = None
             
-            if not raw_data:
-                logger.warning("データが見つかりません", "data", source=data_source, days=days)
-                return {"error": "データが見つかりませんでした"}
-            
-            logger.success("データ取得完了", "data", count=len(raw_data), source=data_source)
-            
-            # 30日間コンテキストを含める場合
-            month_data = None
-            if include_month_context:
-                logger.start(f"{data_source}からの30日間データ取得", "data", days=30)
-                month_data = self._fetch_data(data_source, 30)
-                if month_data:
-                    logger.success("30日間データ取得完了", "data", count=len(month_data), source=data_source)
-                else:
-                    logger.warning("30日間データが見つかりません", "data", source=data_source)
+            if days > 7:
+                # コンテキスト分析用にdays日分のデータを取得
+                logger.start(f"{data_source}からの{days}日間データ取得（コンテキスト用）", "data", days=days)
+                context_data = self._fetch_data(data_source, days)
+                
+                if not context_data:
+                    logger.warning("コンテキストデータが見つかりません", "data", source=data_source, days=days)
+                    return {"error": "データが見つかりませんでした"}
+                
+                logger.success("コンテキストデータ取得完了", "data", count=len(context_data), source=data_source)
+                
+                # 直近7日分のデータも取得
+                logger.start(f"{data_source}からの直近7日間データ取得", "data", days=7)
+                week_data = self._fetch_data(data_source, 7)
+                
+                if not week_data:
+                    logger.warning("直近7日間のデータが見つかりません", "data", source=data_source)
+                    # フォールバック: context_dataから直近7日分を正しく抽出
+                    week_data = self._extract_recent_days_from_context(context_data, 7)
+                
+                logger.success("直近7日間データ取得完了", "data", count=len(week_data), source=data_source)
+            else:
+                # days == 7の場合は通常の処理
+                logger.start(f"{data_source}からのデータ取得", "data", days=days)
+                raw_data = self._fetch_data(data_source, days)
+                
+                if not raw_data:
+                    logger.warning("データが見つかりません", "data", source=data_source, days=days)
+                    return {"error": "データが見つかりませんでした"}
+                
+                logger.success("データ取得完了", "data", count=len(raw_data), source=data_source)
+                week_data = raw_data
             
             # 分析実行
-            logger.start(f"{analysis_type}分析処理", "ai", data_count=len(raw_data))
-            analysis_result = self._analyzer.analyze_documents(
-                raw_data, 
-                analysis_type=analysis_type,
-                apply_filters=True,
-                language=language,
-                month_data=month_data
-            )
+            if days > 7:
+                logger.start(f"{analysis_type}分析処理（{days}日間コンテキスト付き）", "ai", 
+                           week_count=len(week_data), context_count=len(context_data))
+                analysis_result = self._analyzer.analyze_documents(
+                    week_data,
+                    analysis_type=analysis_type,
+                    apply_filters=True,
+                    language=language,
+                    context_data=context_data
+                )
+            else:
+                logger.start(f"{analysis_type}分析処理", "ai", data_count=len(week_data))
+                analysis_result = self._analyzer.analyze_documents(
+                    week_data,
+                    analysis_type=analysis_type,
+                    apply_filters=True,
+                    language=language
+                )
+            
             logger.complete(f"{analysis_type}分析処理", "ai", analyzed_count=analysis_result['data_count'])
             logger.debug(f"言語設定 @ main.py, run_analysis内 analysis_result以後", "ai", language=language)
 
@@ -127,6 +158,62 @@ class PicklesSystem:
             return self._notion_input.fetch_notion_documents(days)
         else:
             raise ValueError(f"未対応のデータソース: {data_source}")
+    
+    def _extract_recent_days_from_context(self, context_data: List[Dict[str, str]], days: int) -> List[Dict[str, str]]:
+        """コンテキストデータから直近N日分のデータを正しく抽出
+        
+        日付でソートし、最新のN日分のデータを返す。
+        日付が欠落している場合は除外する。
+        """
+        from datetime import datetime, timedelta
+        
+        # 日付が存在するデータのみをフィルタリング
+        data_with_dates = [d for d in context_data if d.get('date')]
+        
+        if not data_with_dates:
+            logger.warning("日付情報を持つデータがありません", "data")
+            return context_data[:days] if len(context_data) > days else context_data
+        
+        # 日付でソート（新しい順）
+        try:
+            sorted_data = sorted(
+                data_with_dates,
+                key=lambda x: datetime.strptime(x['date'], '%Y-%m-%d'),
+                reverse=True
+            )
+        except (ValueError, KeyError) as e:
+            logger.warning(f"日付のパース中にエラー: {e}", "data")
+            # フォールバック: 元の順序で最初のN件を返す
+            return data_with_dates[:days] if len(data_with_dates) > days else data_with_dates
+        
+        # 最新の日付を基準に、直近N日間の範囲を計算
+        if sorted_data:
+            try:
+                latest_date = datetime.strptime(sorted_data[0]['date'], '%Y-%m-%d')
+                cutoff_date = latest_date - timedelta(days=days-1)
+                
+                # 直近N日間のデータのみを抽出
+                recent_data = [
+                    d for d in sorted_data
+                    if datetime.strptime(d['date'], '%Y-%m-%d') >= cutoff_date
+                ]
+                
+                # 古い順（昇順）に並び替えて返す
+                recent_data.reverse()
+                
+                logger.info(f"コンテキストから{len(recent_data)}件の直近データを抽出", "data",
+                          latest_date=latest_date.strftime('%Y-%m-%d'),
+                          cutoff_date=cutoff_date.strftime('%Y-%m-%d'))
+                
+                return recent_data
+            except (ValueError, KeyError) as e:
+                logger.warning(f"日付範囲の計算中にエラー: {e}", "data")
+        
+        # 最終フォールバック: ソート済みデータの最初のN件を返す
+        result = sorted_data[:days] if len(sorted_data) > days else sorted_data
+        # 古い順（昇順）に並び替えて返す
+        result.reverse()
+        return result
     
     def _parse_command_args(self, args: List[str]) -> Dict[str, any]:
         """コマンドライン引数を解析"""
@@ -184,7 +271,12 @@ class PicklesSystem:
                 parsed_args["delivery"] = delivery_values
                 i += 1
             elif arg == CommandArgs.DAYS and i + 1 < len(args):
-                parsed_args["days"] = int(args[i + 1])
+                days_value = int(args[i + 1])
+                if days_value < 7:
+                    logger.error("無効な日数指定", "system", value=days_value, minimum=7)
+                    print("エラー: 分析日数は最低7日必要です")
+                    sys.exit(1)
+                parsed_args["days"] = days_value
                 i += 1
             elif arg == CommandArgs.HISTORY and i + 1 < len(args):
                 history_value = args[i + 1].lower()
@@ -209,8 +301,6 @@ class PicklesSystem:
             elif arg == CommandArgs.LANGUAGE and i + 1 < len(args):
                 parsed_args["language"] = args[i + 1]
                 i += 1
-            elif arg == "--month-context":
-                parsed_args["month_context"] = True
             
             i += 1
         
@@ -256,8 +346,7 @@ def parse_command_args(args: List[str]) -> Dict[str, any]:
         "user_name": None,
         "email_to": None,
         "notion_api_key": None,
-        "language": None,
-        "month_context": False
+        "language": None
     }
     
     parsed_args = default_args.copy()
@@ -372,8 +461,7 @@ def main() -> None:
                delivery=delivery_str, 
                source=args["source"],
                days=args["days"],
-               language=args['language'],
-               month_context=args['month_context'])
+               language=args['language'])
     
     if args["schedule"]:
         # スケジュール実行モード
@@ -385,8 +473,7 @@ def main() -> None:
             analysis_type=args["analysis"],
             delivery_methods=args["delivery"],
             days=args["days"],
-            language=args["language"],
-            include_month_context=args["month_context"]
+            language=args["language"]
         )
         
         # 実行結果をログ出力

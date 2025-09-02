@@ -116,8 +116,8 @@ class AgaPrompts:
         return personalized_prompt + cls.BASE_TEMPLATE.format(formatted_data=formatted_data)
     
     @classmethod
-    def create_context_prompt(cls, week_data: str, month_data: str, user_name: str = None, language: str = "English") -> str:
-        """30日間コンテキスト付きAGA用分析プロンプトを生成"""
+    def create_context_prompt(cls, week_data: str, context_data: str, user_name: str = None, language: str = "English") -> str:
+        """コンテキスト付きAGA用分析プロンプトを生成"""
         # ユーザー名が指定されている場合はパーソナライズ
         if user_name:
             salutation = f"{user_name},"
@@ -132,7 +132,7 @@ class AgaPrompts:
             salutation=salutation,
             writer=writer,
             recipient=recipient,
-            month_data=month_data,
+            month_data=context_data,  # month_dataをcontext_dataとして使用
             week_data=week_data,
             language=language
         ) 

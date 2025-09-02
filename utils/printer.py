@@ -48,14 +48,14 @@ class UsagePrinter:
   {CommandArgs.SOURCE}         データソース ({DataSources.NOTION})
   {CommandArgs.ANALYSIS}       分析タイプ ({AnalysisTypes.DOMI} | {AnalysisTypes.AGA})
   {CommandArgs.DELIVERY}       配信方法 ({DeliveryMethods.CONSOLE},{DeliveryMethods.EMAIL_TEXT},{DeliveryMethods.EMAIL_HTML},{DeliveryMethods.FILE_TEXT},{DeliveryMethods.FILE_HTML})
-  {CommandArgs.DAYS}          取得日数 (デフォルト: 7)
+  {CommandArgs.DAYS}          分析日数 (最小: 7, デフォルト: 7)
+                              7日より多い場合、コンテキスト分析を実行
   {CommandArgs.HISTORY}       分析履歴使用 (on | off, デフォルト: on)
   {CommandArgs.SCHEDULE}      定期実行モード
   {CommandArgs.USER_NAME}     ユーザー名 (マルチユーザー対応)
   {CommandArgs.EMAIL_TO}      送信先メールアドレス (マルチユーザー対応)
   {CommandArgs.NOTION_API_KEY} Notion APIキー (マルチユーザー対応)
   {CommandArgs.LANGUAGE}      言語設定 (マルチユーザー対応)
-  --month-context             30日間のコンテキストを含めた分析を実行
   {CommandArgs.HELP}          このヘルプを表示
 
 例:
@@ -65,8 +65,8 @@ class UsagePrinter:
   python main.py {CommandArgs.DELIVERY} {DeliveryMethods.CONSOLE},{DeliveryMethods.FILE_HTML} {CommandArgs.DAYS} 14
   python main.py {CommandArgs.HISTORY} off                                      # 履歴なしで分析
   python main.py {CommandArgs.SCHEDULE}
-  python main.py --month-context                                                # 30日間のコンテキストで分析
-  python main.py {CommandArgs.ANALYSIS} {AnalysisTypes.DOMI} --month-context    # DOMI分析を30日間コンテキストで実行
+  python main.py {CommandArgs.DAYS} 30                                          # 30日間のコンテキストで分析
+  python main.py {CommandArgs.ANALYSIS} {AnalysisTypes.DOMI} {CommandArgs.DAYS} 14  # DOMI分析を14日間コンテキストで実行
   
 マルチユーザー例:
   python main.py {CommandArgs.USER_NAME} "田中太郎" {CommandArgs.EMAIL_TO} "tanaka@example.com" {CommandArgs.NOTION_API_KEY} "secret_xxx"

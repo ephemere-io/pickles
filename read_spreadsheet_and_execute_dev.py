@@ -107,7 +107,7 @@ class GoogleSheetsReader:
             return []
 
 
-def execute_pickles_for_user(user_data: Dict[str, str], analysis_type: str, delivery_methods: str, days: int = 7, month_context: bool = False) -> bool:
+def execute_pickles_for_user(user_data: Dict[str, str], analysis_type: str, delivery_methods: str, days: int = 7) -> bool:
     """
     指定されたユーザーに対してPicklesを実行
     """
@@ -122,10 +122,6 @@ def execute_pickles_for_user(user_data: Dict[str, str], analysis_type: str, deli
             "--notion-api-key", user_data['notion_api_key'],
             "--language", user_data['language']
         ]
-        
-        # 30days Contextが有効な場合、フラグを追加
-        if month_context:
-            cmd.append("--month-context")
         
         logger.start(f"{user_data['user_name']}のPickles実行", "execution")
 
@@ -161,9 +157,8 @@ def main():
     parser.add_argument("--range", default="A1:D", help="読み込み範囲 (デフォルト: A1:D)")
     parser.add_argument("--analysis", default="domi", choices=["domi", "aga"], help="分析タイプ")
     parser.add_argument("--delivery", default="email_html", help="配信方法")
-    parser.add_argument("--days", type=int, default=7, help="取得日数")
+    parser.add_argument("--days", type=int, default=7, help="分析日数（最小7日）")
     parser.add_argument("--service-account-key", help="サービスアカウントキーファイルのパス")
-    parser.add_argument("--month-context", action="store_true", help="30日間のコンテキストを含めて分析")
     
     args = parser.parse_args()
     
@@ -185,12 +180,12 @@ def main():
         
         logger.info(f"{total_count}人のユーザーに対してPickles分析を実行", "execution", 
                    user_count=total_count, analysis_type=args.analysis, 
-                   delivery=args.delivery, days=args.days, month_context=args.month_context)
+                   delivery=args.delivery, days=args.days)
         
         for i, user_data in enumerate(user_data_list, 1):
             logger.info(f"[{i}/{total_count}] ユーザー処理開始", "execution", 
                        user=user_data['user_name'], progress=f"{i}/{total_count}")
-            if execute_pickles_for_user(user_data, args.analysis, args.delivery, args.days, args.month_context):
+            if execute_pickles_for_user(user_data, args.analysis, args.delivery, args.days):
                 success_count += 1
         
         # 実行結果サマリー
