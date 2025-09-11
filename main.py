@@ -6,13 +6,17 @@ Input-Throughput-Output アーキテクチャによる
 日々の感情と思考の分析システム
 """
 
+import os
 import sys
 from typing import List, Dict
 from functools import partial
 from apscheduler.schedulers.blocking import BlockingScheduler
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # 各コンポーネントのインポート
-from inputs import NotionInput, NotionInputError
+from inputs import NotionInput, NotionInputError, GdocsInput, GdocsInputError
 from throughput import DocumentAnalyzer, AnalysisError
 from outputs import ReportDelivery, OutputError
 from utils import logger, UsagePrinter, CommandArgs, DataSources, AnalysisTypes, DeliveryMethods
@@ -24,6 +28,7 @@ class PicklesSystem:
     def __init__(self, user_config: Dict[str, str] = None, enable_history: bool = True):
         # user_configから各種設定を取得
         notion_api_key = user_config.get('notion_api_key') if user_config else None
+        gdocs_url = user_config.get('gdocs_url') if user_config else None
         email_config = {
             'email_to': user_config.get('email_to'),
             'user_name': user_config.get('user_name')
@@ -32,10 +37,10 @@ class PicklesSystem:
         user_name = user_config.get('user_name') if user_config else None
 
         language = user_config.get('language') if user_config else None
-        logger.debug(f"言語設定 @ main.py _init_", "ai", language=language)
 
 
         self._notion_input = NotionInput(api_key=notion_api_key)
+        self._gdocs_url = gdocs_url
         self._analyzer = DocumentAnalyzer(enable_history=enable_history, user_name=user_name, language=language)
         self._delivery = ReportDelivery(email_config=email_config)
         # グローバルloggerインスタンスを使用
@@ -56,14 +61,17 @@ class PicklesSystem:
             days: 分析対象日数（最小7日）
         """
         
-        logger.debug(f"言語設定 @ main.py run_analysis", "ai", language=language)
 
         if delivery_methods is None:
             delivery_methods = ["console"]
         
         # バリデーション
-        if data_source != DataSources.NOTION:
+        if data_source not in [DataSources.NOTION, DataSources.GDOCS]:
             return {"error": f"未対応のデータソース: {data_source}"}
+        
+        # Google Docsの場合はURLが必要（コマンドライン引数または.env）
+        if data_source == DataSources.GDOCS and not self._gdocs_url:
+            return {"error": "Google Docsを使用する場合は--gdocs-urlでURLを指定するか、.envにGOOGLE_DOCS_URLを設定してください"}
         
         # daysの最小値チェック
         if days < 7:
@@ -129,7 +137,6 @@ class PicklesSystem:
                 )
             
             logger.complete(f"{analysis_type}分析処理", "ai", analyzed_count=analysis_result['data_count'])
-            logger.debug(f"言語設定 @ main.py, run_analysis内 analysis_result以後", "ai", language=language)
 
             # レポート配信
             logger.start("レポート配信処理", "system", methods=delivery_methods)
@@ -142,7 +149,7 @@ class PicklesSystem:
             
             return delivery_results
             
-        except (NotionInputError, AnalysisError, OutputError) as e:
+        except (NotionInputError, GdocsInputError, AnalysisError, OutputError) as e:
             error_msg = str(e)
             logger.error("アプリケーションエラー", "system", error_type=type(e).__name__, details=error_msg)
             return {"error": error_msg}
@@ -156,6 +163,8 @@ class PicklesSystem:
         """データ取得"""
         if data_source == DataSources.NOTION:
             return self._notion_input.fetch_notion_documents(days)
+        elif data_source == DataSources.GDOCS:
+            return GdocsInput().fetch_gdocs_documents(self._gdocs_url, days)
         else:
             raise ValueError(f"未対応のデータソース: {data_source}")
     
@@ -227,6 +236,7 @@ class PicklesSystem:
             "user_name": None,
             "email_to": None,
             "notion_api_key": None,
+            "gdocs_url": None,
             "language": None,
             "month_context": False
         }
@@ -241,9 +251,10 @@ class PicklesSystem:
                 return {"help": True}
             elif arg == CommandArgs.SOURCE and i + 1 < len(args):
                 source_value = args[i + 1]
-                if source_value != DataSources.NOTION:
+                valid_data_sources = [DataSources.NOTION, DataSources.GDOCS]
+                if source_value not in valid_data_sources:
                     logger.error("無効なデータソース", "system", value=source_value, 
-                               valid_values=[DataSources.NOTION])
+                               valid_values=valid_data_sources)
                     sys.exit(1)
                 parsed_args["source"] = source_value
                 i += 1
@@ -298,6 +309,9 @@ class PicklesSystem:
             elif arg == CommandArgs.NOTION_API_KEY and i + 1 < len(args):
                 parsed_args["notion_api_key"] = args[i + 1]
                 i += 1
+            elif arg == CommandArgs.GDOCS_URL and i + 1 < len(args):
+                parsed_args["gdocs_url"] = args[i + 1]
+                i += 1
             elif arg == CommandArgs.LANGUAGE and i + 1 < len(args):
                 parsed_args["language"] = args[i + 1]
                 i += 1
@@ -346,6 +360,7 @@ def parse_command_args(args: List[str]) -> Dict[str, any]:
         "user_name": None,
         "email_to": None,
         "notion_api_key": None,
+        "gdocs_url": None,
         "language": None
     }
     
@@ -359,9 +374,10 @@ def parse_command_args(args: List[str]) -> Dict[str, any]:
             return {"help": True}
         elif arg == CommandArgs.SOURCE and i + 1 < len(args):
             source_value = args[i + 1]
-            if source_value != DataSources.NOTION:
+            valid_data_sources = [DataSources.NOTION, DataSources.GDOCS]
+            if source_value not in valid_data_sources:
                 logger.error("無効なデータソース", "system", value=source_value, 
-                           valid_values=[DataSources.NOTION])
+                           valid_values=valid_data_sources)
                 sys.exit(1)
             parsed_args["source"] = source_value
             i += 1
@@ -411,6 +427,9 @@ def parse_command_args(args: List[str]) -> Dict[str, any]:
         elif arg == CommandArgs.NOTION_API_KEY and i + 1 < len(args):
             parsed_args["notion_api_key"] = args[i + 1]
             i += 1
+        elif arg == CommandArgs.GDOCS_URL and i + 1 < len(args):
+            parsed_args["gdocs_url"] = args[i + 1]
+            i += 1
         elif arg == CommandArgs.LANGUAGE and i + 1 < len(args):
             parsed_args["language"] = args[i + 1]
             i += 1
@@ -433,17 +452,17 @@ def main() -> None:
         usage_printer.print_usage()
         sys.exit(0)
     
-    # ユーザー設定の構築
+    # ユーザー設定の構築（コマンドライン引数を優先し、.envをフォールバック）
     user_config = None
-    if args.get("user_name") or args.get("email_to") or args.get("notion_api_key") or args.get("language"):
+    if args.get("user_name") or args.get("email_to") or args.get("notion_api_key") or args.get("gdocs_url") or args.get("language"):
         user_config = {
             'user_name': args.get("user_name"),
             'email_to': args.get("email_to"),
             'notion_api_key': args.get("notion_api_key"),
+            'gdocs_url': args.get("gdocs_url") or os.getenv("GOOGLE_DOCS_URL"),
             'language': args.get("language")
         }
 
-    logger.debug(f"言語設定 @ main.py main() args.get直後", "ai", language=user_config["language"])
 
     # システムを初期化
     system = PicklesSystem(user_config=user_config, enable_history=args["history"])

@@ -12,11 +12,13 @@ CommandArgs = SimpleNamespace(
     USER_NAME="--user-name",
     EMAIL_TO="--email-to",
     NOTION_API_KEY="--notion-api-key",
+    GDOCS_URL="--gdocs-url",
     LANGUAGE="--language"
 )
 
 DataSources = SimpleNamespace(
-    NOTION="notion"
+    NOTION="notion",
+    GDOCS="gdocs"
 )
 
 AnalysisTypes = SimpleNamespace(
@@ -45,7 +47,7 @@ class UsagePrinter:
   python main.py [オプション]
 
 オプション:
-  {CommandArgs.SOURCE}         データソース ({DataSources.NOTION})
+  {CommandArgs.SOURCE}         データソース ({DataSources.NOTION} | {DataSources.GDOCS})
   {CommandArgs.ANALYSIS}       分析タイプ ({AnalysisTypes.DOMI} | {AnalysisTypes.AGA})
   {CommandArgs.DELIVERY}       配信方法 ({DeliveryMethods.CONSOLE},{DeliveryMethods.EMAIL_TEXT},{DeliveryMethods.EMAIL_HTML},{DeliveryMethods.FILE_TEXT},{DeliveryMethods.FILE_HTML})
   {CommandArgs.DAYS}          分析日数 (最小: 7, デフォルト: 7)
@@ -55,12 +57,14 @@ class UsagePrinter:
   {CommandArgs.USER_NAME}     ユーザー名 (マルチユーザー対応)
   {CommandArgs.EMAIL_TO}      送信先メールアドレス (マルチユーザー対応)
   {CommandArgs.NOTION_API_KEY} Notion APIキー (マルチユーザー対応)
+  {CommandArgs.GDOCS_URL}     Google Docs URL (gdocsソース使用時)
   {CommandArgs.LANGUAGE}      言語設定 (マルチユーザー対応)
   {CommandArgs.HELP}          このヘルプを表示
 
 例:
   python main.py                                                                # デフォルト: {DataSources.NOTION}
   python main.py {CommandArgs.SOURCE} {DataSources.NOTION} {CommandArgs.ANALYSIS} {AnalysisTypes.DOMI}
+  python main.py {CommandArgs.SOURCE} {DataSources.GDOCS} {CommandArgs.GDOCS_URL} "https://docs.google.com/document/d/DOC_ID"
   python main.py {CommandArgs.SOURCE} {DataSources.NOTION} {CommandArgs.ANALYSIS} {AnalysisTypes.AGA}
   python main.py {CommandArgs.DELIVERY} {DeliveryMethods.CONSOLE},{DeliveryMethods.FILE_HTML} {CommandArgs.DAYS} 14
   python main.py {CommandArgs.HISTORY} off                                      # 履歴なしで分析

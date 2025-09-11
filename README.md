@@ -2,7 +2,7 @@
 
 > Pickling everyday thoughts and feelings
 
-NotionデータベースとOpenAI APIを使用して、日記エントリから感情・思考の分析レポートを自動生成・配信するPythonアプリケーションです。単体実行とマルチユーザー対応のGitHub Actions実行に対応しています。
+NotionデータベースまたはGoogle DocsとOpenAI APIを使用して、日記エントリから感情・思考の分析レポートを自動生成・配信するPythonアプリケーションです。単体実行とマルチユーザー対応のGitHub Actions実行に対応しています。
 
 ## 🚀 クイックスタート
 
@@ -35,8 +35,11 @@ uv sync
 `.env`ファイルを作成し、以下の値を設定してください：
 
 ```bash
-# Notion API設定
+# Notion API設定（Notionを使用する場合）
 NOTION_API_KEY=your_notion_api_key_here
+
+# Google Docs API設定（Google Docsを使用する場合）
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account-key.json
 
 # OpenAI API設定
 OPENAI_API_KEY=your_openai_api_key_here
@@ -55,10 +58,17 @@ EMAIL_PORT=587
 # デフォルト実行（notion + domi分析 + console出力）
 uv run python main.py
 
-# カスタマイズ実行
+# Notion使用例
 uv run python main.py --source notion --analysis domi --delivery console
 uv run python main.py --source notion --analysis aga --delivery file_html
 uv run python main.py --source notion --analysis domi --delivery console,email_text
+
+# Google Docs使用例
+uv run python main.py --source gdocs --gdocs-url "https://docs.google.com/document/d/DOC_ID"
+uv run python main.py --source gdocs --gdocs-url "URL" --analysis domi --delivery email_html
+uv run python main.py --source gdocs --gdocs-url "URL" --days 30 --analysis aga
+
+# 共通オプション例
 uv run python main.py --days 14 --delivery email_html,file_text
 
 # 履歴機能の使用例
@@ -79,18 +89,19 @@ uv run python main.py --help
 
 | 引数          | 説明               | 選択肢                        | デフォルト |
 | ----------- | ---------------- | -------------------------- | ----- |
-| `--source`  | データソース         | `notion` | notion |
+| `--source`  | データソース         | `notion`, `gdocs` | notion |
 | `--analysis` | 分析タイプ          | `domi`, `aga` | domi |
 | `--delivery` | 配信方法           | `console`, `email_text`, `email_html`, `file_text`, `file_html` | console |
-| `--days`    | 取得日数          | 整数値                        | 7 |
+| `--days`    | 取得日数          | 整数値（最小7日）                        | 7 |
 | `--history` | 分析履歴使用       | `on`, `off`                  | on |
 | `--schedule` | 定期実行モード       | フラグ                        | false |
 | `--user-name` | ユーザー名 | 文字列 | 環境変数 |
 | `--email-to` | 送信先メールアドレス | メールアドレス | 環境変数 |
 | `--notion-api-key` | Notion APIキー | APIキー文字列 | 環境変数 |
+| `--gdocs-url` | Google Docs URL | Google DocsのURL | - |
 | `--help` | ヘルプ表示 | フラグ | false |
 
-## 🔍 Notion分析処理の詳細フロー（2025/07/29時点）
+## 🔍 データ取得・分析処理の詳細フロー
 
 Picklesがどのようにデータを取得・分析しているかを詳しく説明します。
 
@@ -104,9 +115,11 @@ uv run python main.py --analysis domi --delivery console
 - `PicklesSystem`クラスをインスタンス化
 - `run_analysis()`メソッドを実行
 
-#### 2. **データ取得フェーズ**（`inputs/notion_input.py`）
+#### 2. **データ取得フェーズ**
 
-##### **2-0. API接続確認**（初期化時）
+##### **Notionの場合**（`inputs/notion_input.py`）
+
+###### **2-0. API接続確認**（初期化時）
 - ユーザー情報取得でAPIキー有効性を確認
 - サンプル検索でアクセス権限を確認
 
@@ -130,6 +143,29 @@ uv run python main.py --analysis domi --delivery console
    - 最近編集されたページを検索（ページネーション対応）
    - 大規模ワークスペース対応（最大100件ずつ取得）
    - 各ページから同様にタイトル、日付、コンテンツを抽出
+
+##### **Google Docsの場合**（`inputs/gdocs_input.py`）
+
+###### **2-1. API接続確認**（初期化時）
+- Service Account認証での接続確認
+- Google Docs APIアクセス権限の確認
+
+`GdocsInput.fetch_gdocs_documents(doc_url, days=7)`が実行され、以下の処理でデータを取得：
+
+1. **ドキュメントURL解析**
+   - URLからドキュメントIDを抽出
+   - Google Docs APIでドキュメントにアクセス
+
+2. **ドキュメント解析**
+   - マークダウン形式の日付ヘッダー（`# YYYY-MM-DD`）を検出
+   - 日付ごとにエントリを分割
+   - 指定日数（days）でフィルタリング
+
+3. **コンテンツ抽出**
+   - 各日誌エントリから以下を抽出：
+     - **日付**: ヘッダーから抽出（例：2025-01-15）
+     - **タイトル**: "Journal Entry {日付}"形式で自動生成
+     - **コンテンツ**: ヘッダー以下から次のヘッダーまでのテキスト
 
 #### 3. **分析処理フェーズ**（`throughput/analyzer.py`）
 `DocumentAnalyzer.analyze_documents(raw_data, analysis_type="domi")`が実行：
@@ -183,6 +219,11 @@ uv run python main.py --analysis domi --delivery console
 - **ページ本文**: paragraph, heading_1-3, lists, quote, callout, code, toggle, table_row, bookmark, link_preview ブロック
 - **作成日時・編集日時**
 
+#### Google Docsの場合
+- **日付ヘッダー**: `# YYYY-MM-DD`形式で記述された日付
+- **日誌コンテンツ**: 各日付ヘッダー以下に書かれた内容
+- **構造化テキスト**: マークダウン形式で整理された日記エントリ
+
 ### デバッグ情報
 実行時に以下のようなデバッグ情報が表示されます：
 
@@ -212,6 +253,14 @@ uv run python main.py --analysis domi --delivery console
 ✅ ページ abcd1234... のコンテンツを取得（256文字）
 ⚠️  データベースエントリ efgh5678... のコンテンツが空です
 📅 日付フィルタ: 作成2025-07-15, 編集2025-07-16 < 2025-07-22 (除外)
+```
+
+#### Google Docs接続・コンテンツ抽出
+```
+🔗 Google Docs API接続確認: ready
+📄 Google Docsアクセス成功: Personal Journal 2025
+📋 日誌エントリ検出: date=2025-01-15
+✅ 日誌エントリパース完了: total_entries=3, date_range=2025-01-13 ~ 2025-01-15
 ```
 
 ## 🧠 AI分析履歴機能
@@ -251,6 +300,29 @@ uv run python main.py --analysis domi --history on
 
 **データベースを使用する場合の推奨構造:**
 - `Date`プロパティ（日付型） - 作成日以外の日付を使用したい場合
+
+</details>
+
+<details>
+<summary>📄 Google Docs API設定</summary>
+
+1. [Google Cloud Console](https://console.cloud.google.com/)で新しいプロジェクトを作成
+2. Google Docs APIを有効化
+3. Service Accountを作成し、JSONキーをダウンロード
+4. Service AccountのメールアドレスをGoogle Docsの**閲覧者として共有**
+5. JSONキーのパスを`GOOGLE_APPLICATION_CREDENTIALS`に設定
+
+**Google Docs構造要件:**
+```
+# 2025-01-15
+朝から雨だったが、室内で集中して作業できた。
+新しいプロジェクトのアイデアが浮かんだ。
+
+# 2025-01-14
+友人とのランチで刺激的な話を聞けた。
+```
+- 日付ヘッダーは`# YYYY-MM-DD`形式で記述
+- 各ヘッダー以下が該当日の日誌エントリになる
 
 </details>
 
@@ -304,8 +376,9 @@ pickles/
 ├── main.py                    # メインアプリケーション・エントリーポイント
 ├── read_spreadsheet_and_execute.py  # マルチユーザー実行スクリプト
 ├── inputs/
-│   ├── __init__.py           # Notion入力モジュール
-│   └── notion_input.py       # Notionデータ取得（統合クラス設計）
+│   ├── __init__.py           # データ入力モジュール
+│   ├── notion_input.py       # Notionデータ取得（統合クラス設計）
+│   └── gdocs_input.py        # Google Docsデータ取得
 ├── throughput/
 │   ├── __init__.py           # 分析処理モジュール
 │   ├── analyzer.py           # OpenAI感情・思考分析（統合クラス設計）
@@ -485,9 +558,23 @@ uv run pytest tests/smoke/ -m smoke
 ```
 .env
 service_account_key.json
+*.json # Google Service Accountキーファイル
 ```
 
 ### GitHub Actions セキュリティ
 - 全てのAPIキーはGitHub Secretsで管理
-- Google Service Accountは最小権限（Sheets読み取りのみ）
+- Google Service Accountは最小権限（Sheets読み取り、Docs読み取りのみ）
 - 実行環境は`test`環境を使用
+
+## 📚 Google Docs vs Notion比較
+
+| 項目 | Google Docs | Notion |
+|------|-------------|---------|
+| **設定の簡単さ** | Service Account設定が必要 | Integration作成のみ |
+| **書きやすさ** | 慣れ親しんだDoc形式 | 構造化されたデータベース |
+| **データ抽出** | マークダウン形式 | 豊富なプロパティ・ブロック |
+| **共有・権限** | Google アカウントベース | Workspace単位 |
+| **検索・フィルタ** | 日付ヘッダーベース | プロパティベース |
+| **適用場面** | シンプルな日記形式 | 構造化された記録管理 |
+
+どちらを選ぶかは、日記の書き方や管理スタイルによって決めてください。
