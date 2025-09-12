@@ -8,7 +8,7 @@ on:
     inputs:
       spreadsheet_id:
         description: 'スプレッドシートID'
-        required: false
+        required: true
         default: ${{ secrets.SPREADSHEET_ID_EN_TESTERS_LIST }}
         type: string
       analysis_type:
