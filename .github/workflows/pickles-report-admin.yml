@@ -1,0 +1,118 @@
+name: Pickles Multi-User Report
+
+on:
+  workflow_dispatch: # 手動実行
+    inputs:
+      spreadsheet_id:
+        description: 'スプレッドシートID'
+        required: false
+        default: ${{ secrets.SPREADSHEET_ID_ADMIN_LIST }}
+        type: string
+      analysis_type:
+        description: '分析タイプ'
+        required: false
+        default: 'domi'
+        type: choice
+        options:
+          - domi
+          - aga
+      delivery_method:
+        description: '配信方法'
+        required: false
+        default: 'email_html'
+        type: choice
+        options:
+          - email_html
+          - email_text
+          - console
+          - file_text
+          - file_html
+      days_back:
+        description: '何日前からのデータを取得するか'
+        required: false
+        default: '30'
+        type: string
+      language:
+        description: '出力言語'
+        required: false
+        default: 'japanese'
+        type: choice
+        options:
+          - japanese
+          - english
+      debug_mode:
+        description: 'デバッグモード（詳細ログを出力）'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  send-report:
+    runs-on: ubuntu-latest
+    environment: test
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
+        cache-dependency-glob: "uv.lock"
+    
+    - name: Set up Python
+      run: uv python install 3.12
+    
+    - name: Install dependencies
+      run: uv sync --frozen
+    
+    - name: Run Multi-User Pickles analysis
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        EMAIL_USER: ${{ secrets.EMAIL_USER }}
+        EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+        EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
+        EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
+        GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+      run: |
+        # 環境変数から設定を取得（手動実行のみ）
+        SPREADSHEET_ID="${{ github.event.inputs.spreadsheet_id || secrets.SPREADSHEET_ID_ADMIN_LIST }}"
+        echo "🔧 手動実行: スプレッドシートID: ${SPREADSHEET_ID:0:10}..."
+        
+        ANALYSIS="${{ github.event.inputs.analysis_type || 'domi' }}"
+        DELIVERY="${{ github.event.inputs.delivery_method || 'email_html' }}"
+        DAYS="${{ github.event.inputs.days_back || '30' }}"
+        LANGUAGE="${{ github.event.inputs.language || 'japanese' }}"
+        
+        # 必須パラメータのチェック
+        if [[ -z "$SPREADSHEET_ID" ]]; then
+          echo "❌ ERROR: SPREADSHEET_ID is not set in secrets"
+          exit 1
+        fi
+        
+        # デバッグモードの確認
+        if [[ "${{ github.event.inputs.debug_mode }}" == "true" ]]; then
+          echo "=== Debug Mode Enabled ==="
+          echo "Spreadsheet ID: $SPREADSHEET_ID"
+          echo "Analysis Type: $ANALYSIS"
+          echo "Delivery Method: $DELIVERY"
+          echo "Days Back: $DAYS"
+          echo "Language: $LANGUAGE"
+          echo "Environment variables status:"
+          echo "OPENAI_API_KEY: ${OPENAI_API_KEY:+SET}"
+          echo "EMAIL_USER: ${EMAIL_USER:+SET}"
+          echo "EMAIL_PASS: ${EMAIL_PASS:+SET}"
+          echo "EMAIL_HOST: ${EMAIL_HOST:+SET}"
+          echo "EMAIL_PORT: ${EMAIL_PORT:+SET}"
+          echo "GOOGLE_SERVICE_ACCOUNT_KEY: ${GOOGLE_SERVICE_ACCOUNT_KEY:+SET}"
+          echo "========================"
+        fi
+        
+        # Google Sheetsからマルチユーザー実行
+        uv run python read_spreadsheet_and_execute.py \
+          --spreadsheet-id "$SPREADSHEET_ID" \
+          --analysis "$ANALYSIS" \
+          --delivery "$DELIVERY" \
+          --days "$DAYS" \
+          --language "$LANGUAGE"
