@@ -22,7 +22,12 @@ def run_main_command(args: List[str], timeout: int = 30, use_mocks: bool = True)
     Returns:
         subprocess.CompletedProcess: 実行結果
     """
-    cmd = ["uv", "run", "python", "main.py"] + args
+    # Use virtual environment Python directly if uv is not available
+    venv_python = "/Users/yuki.agatsuma@sa-nu.com/Desktop/pickles/.venv/bin/python"
+    if os.path.exists(venv_python):
+        cmd = [venv_python, "main.py"] + args
+    else:
+        cmd = ["python3", "main.py"] + args
     
     # 現在の環境変数を使用（.envファイルから読み込み済み）
     env = os.environ.copy()
@@ -37,7 +42,7 @@ def run_main_command(args: List[str], timeout: int = 30, use_mocks: bool = True)
         text=True,
         timeout=timeout,
         env=env,
-        cwd="/Users/yukiagatsuma/Desktop/pickles"
+        cwd="/Users/yuki.agatsuma@sa-nu.com/Desktop/pickles"
     )
 
 
@@ -113,7 +118,9 @@ def assert_system_initialization(result: subprocess.CompletedProcess):
 def assert_analysis_started(result: subprocess.CompletedProcess, analysis_type: str):
     """Assert that specific analysis type was started"""
     assert f"analysis={analysis_type}" in result.stdout, f"Analysis type '{analysis_type}' not found in output"
-    assert f"{analysis_type}分析処理開始" in result.stdout, f"Analysis processing not started for {analysis_type}"
+    # Check for both regular and context analysis mode
+    analysis_started = f"{analysis_type}分析処理開始" in result.stdout or f"{analysis_type}分析処理（" in result.stdout
+    assert analysis_started, f"Analysis processing not started for {analysis_type}"
 
 
 def assert_delivery_started(result: subprocess.CompletedProcess, delivery_method: str):

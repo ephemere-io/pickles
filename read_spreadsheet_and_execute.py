@@ -11,10 +11,8 @@ import sys
 import subprocess
 import argparse
 from typing import List, Dict
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from utils import logger
+from utils import logger, get_google_service, GoogleAPIError
 
 
 class GoogleSheetsReader:
@@ -25,18 +23,14 @@ class GoogleSheetsReader:
         service_account_key_file: サービスアカウントキーのJSONファイルパス
         環境変数GOOGLE_APPLICATION_CREDENTIALSが設定されている場合はそちらを優先
         """
-        self.service_account_key_file = service_account_key_file or os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-        
-        if not self.service_account_key_file:
-            raise ValueError("Google Service Account key file is required. Set GOOGLE_APPLICATION_CREDENTIALS or provide key file path.")
-        
-        # Google Sheets APIの認証とサービス構築
-        self.scopes = ['https://www.googleapis.com/auth/spreadsheets.readonly']
-        self.credentials = service_account.Credentials.from_service_account_file(
-            self.service_account_key_file, 
-            scopes=self.scopes
-        )
-        self.service = build('sheets', 'v4', credentials=self.credentials)
+        # 統一されたGoogle APIサービスを使用
+        try:
+            self._google_service = get_google_service(service_account_key_file)
+            self.service = self._google_service.get_sheets_service()
+            logger.info("Google Sheets統合サービス初期化完了", "sheets")
+        except GoogleAPIError as e:
+            logger.error("Google Sheets統合サービス初期化失敗", "sheets", error=str(e))
+            raise ValueError(f"Google Sheets初期化エラー: {e}")
     
     def read_user_data(self, spreadsheet_id: str, range_name: str = "A1:D") -> List[Dict[str, str]]:
         """
@@ -50,6 +44,10 @@ class GoogleSheetsReader:
         E列: その他（オプション）
         """
         try:
+            # アクセステストを実行
+            if not self._google_service.test_sheets_access(spreadsheet_id):
+                raise ValueError(f"Google Sheetsへのアクセスが拒否されました。スプレッドシート共有設定を確認してください: {spreadsheet_id}")
+            
             # スプレッドシートのデータを取得
             sheet = self.service.spreadsheets()
             result = sheet.values().get(
@@ -71,7 +69,7 @@ class GoogleSheetsReader:
                         'email_to': row[0].strip() if row[0] else '',
                         'notion_api_key': row[1].strip() if row[1] else '',
                         'user_name': row[2].strip() if row[2] else f'User {i-1}',
-                        'language' : row[3].strip() if row[3] else '日本語',
+                        'language' : row[3].strip() if row[3] else 'japanese',
                     }
                     
                     # 必須フィールドのバリデーション
@@ -97,6 +95,9 @@ class GoogleSheetsReader:
             logger.success("スプレッドシートデータ読み込み完了", "sheets", user_count=len(user_data_list))
             return user_data_list
             
+        except GoogleAPIError as error:
+            logger.error("Google API統合エラー", "sheets", error=str(error))
+            return []
         except HttpError as error:
             logger.error("Google Sheets APIエラー", "sheets", error=str(error))
             return []
@@ -105,11 +106,14 @@ class GoogleSheetsReader:
             return []
 
 
-def execute_pickles_for_user(user_data: Dict[str, str], analysis_type: str, delivery_methods: str, days: int = 7) -> bool:
+def execute_pickles_for_user(user_data: Dict[str, str], analysis_type: str, delivery_methods: str, days: int = 7, language: str = "japanese") -> bool:
     """
     指定されたユーザーに対してPicklesを実行
     """
     try:
+        # ユーザーデータから言語設定を取得、なければコマンドライン引数から取得
+        user_language = user_data.get('language', language)
+        
         cmd = [
             sys.executable, "main.py",
             "--analysis", analysis_type,
@@ -118,7 +122,7 @@ def execute_pickles_for_user(user_data: Dict[str, str], analysis_type: str, deli
             "--user-name", user_data['user_name'],
             "--email-to", user_data['email_to'],
             "--notion-api-key", user_data['notion_api_key'],
-            "--language", user_data['language']
+            "--language", user_language
         ]
         
         logger.start(f"{user_data['user_name']}のPickles実行", "execution")
@@ -154,6 +158,7 @@ def main():
     parser.add_argument("--analysis", default="domi", choices=["domi", "aga"], help="分析タイプ")
     parser.add_argument("--delivery", default="email_html", help="配信方法")
     parser.add_argument("--days", type=int, default=7, help="取得日数")
+    parser.add_argument("--language", default="japanese", help="出力言語")
     parser.add_argument("--service-account-key", help="サービスアカウントキーファイルのパス")
     
     args = parser.parse_args()
@@ -181,7 +186,7 @@ def main():
         for i, user_data in enumerate(user_data_list, 1):
             logger.info(f"[{i}/{total_count}] ユーザー処理開始", "execution", 
                        user=user_data['user_name'], progress=f"{i}/{total_count}")
-            if execute_pickles_for_user(user_data, args.analysis, args.delivery, args.days):
+            if execute_pickles_for_user(user_data, args.analysis, args.delivery, args.days, args.language):
                 success_count += 1
         
         # 実行結果サマリー

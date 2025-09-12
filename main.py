@@ -9,8 +9,6 @@ Input-Throughput-Output アーキテクチャによる
 import os
 import sys
 from typing import List, Dict
-from functools import partial
-from apscheduler.schedulers.blocking import BlockingScheduler
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -25,7 +23,7 @@ from utils import logger, UsagePrinter, CommandArgs, DataSources, AnalysisTypes,
 class PicklesSystem:
     """Picklesシステムメインクラス"""
     
-    def __init__(self, user_config: Dict[str, str] = None, enable_history: bool = True):
+    def __init__(self, user_config: Dict[str, str] = None):
         # user_configから各種設定を取得
         notion_api_key = user_config.get('notion_api_key') if user_config else None
         gdocs_url = user_config.get('gdocs_url') if user_config else None
@@ -41,7 +39,7 @@ class PicklesSystem:
 
         self._notion_input = NotionInput(api_key=notion_api_key)
         self._gdocs_url = gdocs_url
-        self._analyzer = DocumentAnalyzer(enable_history=enable_history, user_name=user_name, language=language)
+        self._analyzer = DocumentAnalyzer(user_name=user_name, language=language)
         self._delivery = ReportDelivery(email_config=email_config)
         # グローバルloggerインスタンスを使用
         
@@ -231,14 +229,11 @@ class PicklesSystem:
             "analysis": AnalysisTypes.DOMI, 
             "delivery": [DeliveryMethods.CONSOLE],
             "days": 7,
-            "history": True,
-            "schedule": False,
             "user_name": None,
             "email_to": None,
             "notion_api_key": None,
             "gdocs_url": None,
             "language": None,
-            "month_context": False
         }
         
         parsed_args = default_args.copy()
@@ -289,17 +284,6 @@ class PicklesSystem:
                     sys.exit(1)
                 parsed_args["days"] = days_value
                 i += 1
-            elif arg == CommandArgs.HISTORY and i + 1 < len(args):
-                history_value = args[i + 1].lower()
-                valid_history_values = ["on", "off"]
-                if history_value not in valid_history_values:
-                    logger.error("無効な履歴オプション", "system", value=history_value,
-                                valid_values=valid_history_values)
-                    sys.exit(1)
-                parsed_args["history"] = history_value == "on"
-                i += 1
-            elif arg == CommandArgs.SCHEDULE:
-                parsed_args["schedule"] = True
             elif arg == CommandArgs.USER_NAME and i + 1 < len(args):
                 parsed_args["user_name"] = args[i + 1]
                 i += 1
@@ -320,32 +304,6 @@ class PicklesSystem:
         
         return parsed_args
     
-    def schedule_job(self, 
-                    cron_day: str = "mon", 
-                    cron_hour: int = 7, 
-                    cron_minute: int = 0) -> None:
-        """定期実行をスケジュール"""
-        scheduler = BlockingScheduler(timezone="Asia/Tokyo")
-        
-        # デフォルト設定で週次実行
-        default_analysis = partial(
-            self.run_analysis,
-            data_source=DataSources.NOTION,
-            analysis_type=AnalysisTypes.DOMI,
-            delivery_methods=[DeliveryMethods.CONSOLE, DeliveryMethods.EMAIL_TEXT],
-            days=7
-        )
-        
-        scheduler.add_job(
-            default_analysis,
-            trigger="cron", 
-            day_of_week=cron_day, 
-            hour=cron_hour, 
-            minute=cron_minute
-        )
-        
-        logger.info("スケジューラー開始", "scheduler", day=cron_day, hour=cron_hour, minute=cron_minute)
-        scheduler.start()
 
 
 def parse_command_args(args: List[str]) -> Dict[str, any]:
@@ -355,8 +313,6 @@ def parse_command_args(args: List[str]) -> Dict[str, any]:
         "analysis": AnalysisTypes.DOMI, 
         "delivery": [DeliveryMethods.CONSOLE],
         "days": 7,
-        "history": True,
-        "schedule": False,
         "user_name": None,
         "email_to": None,
         "notion_api_key": None,
@@ -407,17 +363,6 @@ def parse_command_args(args: List[str]) -> Dict[str, any]:
         elif arg == CommandArgs.DAYS and i + 1 < len(args):
             parsed_args["days"] = int(args[i + 1])
             i += 1
-        elif arg == CommandArgs.HISTORY and i + 1 < len(args):
-            history_value = args[i + 1].lower()
-            valid_history_values = ["on", "off"]
-            if history_value not in valid_history_values:
-                logger.error("無効な履歴オプション", "system", value=history_value,
-                            valid_values=valid_history_values)
-                sys.exit(1)
-            parsed_args["history"] = history_value == "on"
-            i += 1
-        elif arg == CommandArgs.SCHEDULE:
-            parsed_args["schedule"] = True
         elif arg == CommandArgs.USER_NAME and i + 1 < len(args):
             parsed_args["user_name"] = args[i + 1]
             i += 1
@@ -433,8 +378,6 @@ def parse_command_args(args: List[str]) -> Dict[str, any]:
         elif arg == CommandArgs.LANGUAGE and i + 1 < len(args):
             parsed_args["language"] = args[i + 1]
             i += 1
-        elif arg == "--month-context":
-            parsed_args["month_context"] = True
         
         i += 1
     
@@ -465,13 +408,9 @@ def main() -> None:
 
 
     # システムを初期化
-    system = PicklesSystem(user_config=user_config, enable_history=args["history"])
+    system = PicklesSystem(user_config=user_config)
     
     logger.info("Picklesシステム開始", "system")
-    if args["history"]:
-        logger.info("分析履歴機能有効", "system", feature="history")
-    else:
-        logger.info("分析履歴機能無効", "system", feature="history")
     
     # 設定情報をログ出力（テスト用の明確な形式で）
     delivery_str = ",".join(args["delivery"]) if isinstance(args["delivery"], list) else args["delivery"]
@@ -482,31 +421,27 @@ def main() -> None:
                days=args["days"],
                language=args['language'])
     
-    if args["schedule"]:
-        # スケジュール実行モード
-        system.schedule_job()
+    # 分析実行
+    results = system.run_analysis(
+        data_source=args["source"],
+        analysis_type=args["analysis"],
+        delivery_methods=args["delivery"],
+        days=args["days"],
+        language=args["language"]
+    )
+    
+    # 実行結果をログ出力
+    if "error" in results:
+        logger.error("分析実行失敗", "system", error=results["error"])
     else:
-        # 即座に実行モード
-        results = system.run_analysis(
-            data_source=args["source"],
-            analysis_type=args["analysis"],
-            delivery_methods=args["delivery"],
-            days=args["days"],
-            language=args["language"]
-        )
-        
-        # 実行結果をログ出力
-        if "error" in results:
-            logger.error("分析実行失敗", "system", error=results["error"])
-        else:
-            success_methods = [k for k, v in results.items() if "成功" in str(v)]
-            logger.success("分析実行完了", "system", 
-                         success_count=len(success_methods),
-                         methods=list(results.keys()))
-        
-        # エラーがある場合は終了コード1で終了
-        if "error" in results:
-            sys.exit(1)
+        success_methods = [k for k, v in results.items() if "成功" in str(v)]
+        logger.success("分析実行完了", "system", 
+                     success_count=len(success_methods),
+                     methods=list(results.keys()))
+    
+    # エラーがある場合は終了コード1で終了
+    if "error" in results:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

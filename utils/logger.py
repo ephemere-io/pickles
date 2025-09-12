@@ -29,7 +29,6 @@ class Logger:
         "notion": "📋",
         "sheets": "📈",
         "execution": "🔄",
-        "scheduler": "⏰"
     }
     
     def __init__(self, json_output: bool = False):

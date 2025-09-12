@@ -52,244 +52,185 @@ EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 ```
 
-### 4. 実行
+## 📋 コマンドライン引数リファレンス
+
+<table>
+<tr>
+<th>オプション</th>
+<th>説明</th>
+<th>値</th>
+<th>デフォルト</th>
+<th>備考</th>
+</tr>
+<tr>
+<td><code>--source</code></td>
+<td>データソース</td>
+<td><code>notion</code> | <code>gdocs</code></td>
+<td><code>notion</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>--analysis</code></td>
+<td>分析タイプ</td>
+<td><code>domi</code> | <code>aga</code></td>
+<td><code>domi</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>--delivery</code></td>
+<td>配信方法</td>
+<td><code>console</code> | <code>email_html</code> | <code>email_text</code> | <code>file_html</code> | <code>file_text</code></td>
+<td><code>console</code></td>
+<td>複数指定可（カンマ区切り）</td>
+</tr>
+<tr>
+<td><code>--days</code></td>
+<td>分析日数</td>
+<td>整数値（最小7）</td>
+<td><code>7</code></td>
+<td>7日超でコンテキスト分析</td>
+</tr>
+<tr>
+<td><code>--language</code></td>
+<td>出力言語</td>
+<td><code>japanese</code> | <code>english</code></td>
+<td><code>english</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>--gdocs-url</code></td>
+<td>Google Docs URL</td>
+<td>Google DocsのURL</td>
+<td>-</td>
+<td><code>--source gdocs</code>時のみ必要</td>
+</tr>
+<tr>
+<td><code>--user-name</code></td>
+<td>ユーザー名</td>
+<td>文字列</td>
+<td>-</td>
+<td>未指定時は環境変数<code>USER_NAME</code></td>
+</tr>
+<tr>
+<td><code>--email-to</code></td>
+<td>送信先メール</td>
+<td>メールアドレス</td>
+<td>-</td>
+<td>未指定時は環境変数<code>EMAIL_TO</code></td>
+</tr>
+<tr>
+<td><code>--notion-api-key</code></td>
+<td>Notion APIキー</td>
+<td>APIキー文字列</td>
+<td>-</td>
+<td><code>--source notion</code>時、未指定は環境変数<code>NOTION_API_KEY</code></td>
+</tr>
+<tr>
+<td><code>--help</code></td>
+<td>ヘルプ表示</td>
+<td>フラグ</td>
+<td>-</td>
+<td>詳細な使用例も表示</td>
+</tr>
+</table>
+
+## 💡 実行例
 
 ```bash
-# デフォルト実行（notion + domi分析 + console出力）
+# 基本実行（Notion + DOMI + コンソール出力）
 uv run python main.py
 
-# Notion使用例
-uv run python main.py --source notion --analysis domi --delivery console
-uv run python main.py --source notion --analysis aga --delivery file_html
-uv run python main.py --source notion --analysis domi --delivery console,email_text
+# 英語でメール送信
+uv run python main.py --delivery email_html --language english
 
-# Google Docs使用例
-uv run python main.py --source gdocs --gdocs-url "https://docs.google.com/document/d/DOC_ID"
-uv run python main.py --source gdocs --gdocs-url "URL" --analysis domi --delivery email_html
-uv run python main.py --source gdocs --gdocs-url "URL" --days 30 --analysis aga
+# Google Docsから分析
+uv run python main.py --source gdocs
 
-# 共通オプション例
-uv run python main.py --days 14 --delivery email_html,file_text
+# 30日コンテキストでAGA分析
+uv run python main.py --analysis aga --days 30
 
-# 履歴機能の使用例
-uv run python main.py --history on --delivery email_html    # 過去の分析を参考にした継続的分析（デフォルト）
-uv run python main.py --history off --delivery console     # 履歴なしの独立分析
+# 複数配信方法
+uv run python main.py --delivery console,email_html,file_text
 
-# 定期実行モード
-uv run python main.py --schedule
+# 指定実行（Notion）
+uv run python main.py --user-name "田中太郎" --email-to "tanaka@example.com" --notion-api-key "secret_xxx"
 
-# ヘルプ表示
+# 指定実行（Google Docs）
+uv run python main.py --source gdocs --gdocs-url "https://docs.google.com/document/d/DOC_ID" --user-name "田中太郎"
+
+
+# 詳細ヘルプ表示
 uv run python main.py --help
-
-# スケジューラー実行（毎週月曜7:00）
-# main.pyのスケジューラー部分のコメントアウトを解除してから実行
 ```
 
-#### 📝 コマンドライン引数
+## ⚡ 機能紹介
 
-| 引数          | 説明               | 選択肢                        | デフォルト |
-| ----------- | ---------------- | -------------------------- | ----- |
-| `--source`  | データソース         | `notion`, `gdocs` | notion |
-| `--analysis` | 分析タイプ          | `domi`, `aga` | domi |
-| `--delivery` | 配信方法           | `console`, `email_text`, `email_html`, `file_text`, `file_html` | console |
-| `--days`    | 取得日数          | 整数値（最小7日）                        | 7 |
-| `--history` | 分析履歴使用       | `on`, `off`                  | on |
-| `--schedule` | 定期実行モード       | フラグ                        | false |
-| `--user-name` | ユーザー名 | 文字列 | 環境変数 |
-| `--email-to` | 送信先メールアドレス | メールアドレス | 環境変数 |
-| `--notion-api-key` | Notion APIキー | APIキー文字列 | 環境変数 |
-| `--gdocs-url` | Google Docs URL | Google DocsのURL | - |
-| `--help` | ヘルプ表示 | フラグ | false |
+<details>
+<summary><strong>📝 データソース連携</strong> - NotionデータベースとGoogle Docsから日記データを取得</summary>
 
-## 🔍 データ取得・分析処理の詳細フロー
+### Notion連携
+- **データベース自動検索**: 日記エントリが含まれるデータベースを自動発見
+- **フォールバック検索**: データベースが見つからない場合はページ検索
+- **豊富なプロパティ対応**: rich_text, select, multi_select, url, email, phone_number, number, checkbox
 
-Picklesがどのようにデータを取得・分析しているかを詳しく説明します。
+### Google Docs連携
+- **日付ヘッダー形式**: `# YYYY-MM-DD`で構造化された日記エントリを解析
+- **マークダウン対応**: 構造化テキストから日記内容を抽出
 
-### 処理の流れ（実行順序）
+</details>
 
-#### 1. **プログラム起動**（`main.py`）
-```
-uv run python main.py --analysis domi --delivery console
-```
-- コマンドライン引数を解析
-- `PicklesSystem`クラスをインスタンス化
-- `run_analysis()`メソッドを実行
+<details>
+<summary><strong>🧠 AI分析機能</strong> - OpenAI APIを使用した感情・思考分析</summary>
 
-#### 2. **データ取得フェーズ**
+### DOMI分析
+- **ゆらぎ**: 内面と他者との関係性の変化
+- **ゆだね**: 自律性と他律性のバランス
+- **ゆとり**: 目的達成主義からの脱却と余白の創出
 
-##### **Notionの場合**（`inputs/notion_input.py`）
+### AGA分析
+- **行動パターン**: 日常の習慣と変化の分析
+- **感情の流れ**: 気持ちの変遷と要因の特定
+- **成長ポイント**: 個人的成長の機会の発見
 
-###### **2-0. API接続確認**（初期化時）
-- ユーザー情報取得でAPIキー有効性を確認
-- サンプル検索でアクセス権限を確認
+### コンテキスト分析
+- **7日以上の期間指定**: 長期的な傾向と短期的な変化を同時分析
+- **継続的洞察**: 過去データとの比較による深い理解
 
-`NotionInput.fetch_notion_documents(days=7)`が実行され、以下の優先順位でデータを取得：
+</details>
 
-1. **データベース検索を試行**
-   - Notion APIで利用可能なデータベースを検索
-   - 見つかった場合、最初のデータベースにアクセス
-   
-2. **データベースからエントリ取得**（データベースが見つかった場合）
-   - `Date`プロパティでフィルタリング（過去7日分）
-   - 失敗した場合は`Created time`でフィルタリング
-   - 各エントリから以下を抽出：
-     - **タイトル**: タイトルプロパティから
-     - **日付**: Dateプロパティまたは作成日時
-     - **コンテンツ**: 
-       - データベースのプロパティ（rich_text, select, multi_select, url, email, phone_number, number, checkbox）
-       - ページ本体のブロック（paragraph, heading_1-3, lists, quote, callout, code, toggle, table_row, bookmark, link_preview）
+<details>
+<summary><strong>📤 多様な配信方法</strong> - 分析結果を様々な形式で出力</summary>
 
-3. **通常のページ検索**（データベースが見つからない場合）
-   - 最近編集されたページを検索（ページネーション対応）
-   - 大規模ワークスペース対応（最大100件ずつ取得）
-   - 各ページから同様にタイトル、日付、コンテンツを抽出
+- **console**: ターミナルに直接表示
+- **email_html/email_text**: HTMLまたはテキスト形式でメール送信
+- **file_html/file_text**: ファイルとして保存
+- **複数同時配信**: カンマ区切りで複数方法を指定可能
 
-##### **Google Docsの場合**（`inputs/gdocs_input.py`）
+</details>
 
-###### **2-1. API接続確認**（初期化時）
-- Service Account認証での接続確認
-- Google Docs APIアクセス権限の確認
 
-`GdocsInput.fetch_gdocs_documents(doc_url, days=7)`が実行され、以下の処理でデータを取得：
+<details>
+<summary><strong>🤖 GitHub Actions マルチユーザー実行</strong> - 複数ユーザーの自動分析・配信</summary>
 
-1. **ドキュメントURL解析**
-   - URLからドキュメントIDを抽出
-   - Google Docs APIでドキュメントにアクセス
+- **Google Sheets連携**: スプレッドシートからユーザー情報を一括読み込み
+- **定期実行**: 毎週月曜7:00に自動実行
+- **個別設定**: ユーザーごとに言語・APIキー・送信先を設定可能
+- **手動実行**: 任意のタイミングで実行可能
 
-2. **ドキュメント解析**
-   - マークダウン形式の日付ヘッダー（`# YYYY-MM-DD`）を検出
-   - 日付ごとにエントリを分割
-   - 指定日数（days）でフィルタリング
+</details>
 
-3. **コンテンツ抽出**
-   - 各日誌エントリから以下を抽出：
-     - **日付**: ヘッダーから抽出（例：2025-01-15）
-     - **タイトル**: "Journal Entry {日付}"形式で自動生成
-     - **コンテンツ**: ヘッダー以下から次のヘッダーまでのテキスト
+<details>
+<summary><strong>🌍 多言語対応</strong> - 日本語・英語での分析結果出力</summary>
 
-#### 3. **分析処理フェーズ**（`throughput/analyzer.py`）
-`DocumentAnalyzer.analyze_documents(raw_data, analysis_type="domi")`が実行：
+- **japanese**: 日本語での分析結果
+- **english**: 英語での分析結果
+- **ユーザー別設定**: マルチユーザー実行時に個別言語設定
 
-1. **データの前処理**
-   - 取得したデータをそのまま使用（フィルタリングは無効化）
-   - データを分析用フォーマットに整形
+</details>
 
-2. **分析履歴の取得**（`--history on`の場合）
-   - `analysis_history.json`から過去3回分の分析を読み込み
-   - 分析タイプ（domi/aga）別に履歴を管理
+## 📋 環境構築
 
-3. **プロンプト生成**
-   - **domi分析**（`throughput/prompts/domi_prompts.py`）: 
-     - 「ゆらぎ」「ゆだね」「ゆとり」の観点から分析
-     - コード化・概念抽出・手紙形式での振り返り
-   - **aga分析**（`throughput/prompts/aga_prompts.py`）:
-     - より詩的で抽象的な分析アプローチ
-
-4. **OpenAI API呼び出し**
-   - モデル: `o1-mini`
-   - 最大トークン数: 50,000
-   - 分析履歴を含めてリクエスト送信
-
-5. **結果の保存**
-   - 分析結果を`analysis_history.json`に追加
-   - 最新10件のみ保持（古い履歴は自動削除）
-
-#### 4. **レポート生成・配信フェーズ**（`outputs/report_generator.py`）
-`ReportDelivery.deliver_report(analysis_results, delivery_methods=["console"])`が実行：
-
-1. **レポート生成**
-   - データ統計（件数、平均文字数）を計算
-   - AI分析結果を整形
-   - 日付・時刻を付加
-
-2. **配信方法別の処理**
-   - **console**: ターミナルに表示
-   - **email_text/email_html**: メールで送信
-   - **file_text/file_html**: ファイルに保存
-
-### 実際に分析される内容
-
-#### Notionデータベースの場合
-- **プロパティ情報**: rich_text, select, multi_select, url, email, phone_number, number, checkbox プロパティ
-- **ページコンテンツ**: 各エントリのページ本体に書かれた内容
-- **メタデータ**: 作成日時、タイトル
-
-#### 通常のNotionページの場合
-- **ページタイトル**
-- **ページ本文**: paragraph, heading_1-3, lists, quote, callout, code, toggle, table_row, bookmark, link_preview ブロック
-- **作成日時・編集日時**
-
-#### Google Docsの場合
-- **日付ヘッダー**: `# YYYY-MM-DD`形式で記述された日付
-- **日誌コンテンツ**: 各日付ヘッダー以下に書かれた内容
-- **構造化テキスト**: マークダウン形式で整理された日記エントリ
-
-### デバッグ情報
-実行時に以下のようなデバッグ情報が表示されます：
-
-#### API接続・権限確認
-```
-✅ Notion API接続成功: [ユーザー名]
-📊 アクセス可能なページ数（サンプル）: 5+
-```
-
-#### データベース検索
-```
-🗄️  データベースを検索中...
-📊 3個のデータベースが見つかりました
-📂 データベース 'Daily Notes' (ID: abcd1234...) を使用
-```
-
-#### ページ検索（フォールバック時）
-```
-🔎 ページ検索を実行中...
-📄 取得済み: 100件 (has_more: true)
-📑 検索で合計145件のページが見つかりました
-```
-
-#### コンテンツ抽出
-```
-📋 プロパティから5項目のコンテンツを抽出
-✅ ページ abcd1234... のコンテンツを取得（256文字）
-⚠️  データベースエントリ efgh5678... のコンテンツが空です
-📅 日付フィルタ: 作成2025-07-15, 編集2025-07-16 < 2025-07-22 (除外)
-```
-
-#### Google Docs接続・コンテンツ抽出
-```
-🔗 Google Docs API接続確認: ready
-📄 Google Docsアクセス成功: Personal Journal 2025
-📋 日誌エントリ検出: date=2025-01-15
-✅ 日誌エントリパース完了: total_entries=3, date_range=2025-01-13 ~ 2025-01-15
-```
-
-## 🧠 AI分析履歴機能
-
-Picklesは**OpenAI o1-miniのResponses API履歴機能**を活用し、過去の分析結果を踏まえた継続的な洞察を提供します。
-
-### 機能概要
-- **継続的コンテキスト**: 過去3回分の分析履歴をAIに送信
-- **パターン認識**: 時系列での変化や傾向の発見
-- **個人最適化**: ユーザー固有のパターンに特化した分析
-
-### 履歴データ管理
-- **保存場所**: プロジェクトルートの`analysis_history.json`
-- **最大履歴数**: 10件（自動削除）
-- **分析タイプ別**: `domi`と`aga`で独立管理
-
-### 使用例
-```bash
-# 履歴ありで継続的分析（推奨）
-uv run python main.py --history on
-
-# 従来通りの独立分析
-uv run python main.py --history off
-
-# 特定分析タイプで履歴活用
-uv run python main.py --analysis domi --history on
-```
-
-## 📋 必要なAPI設定
+### 必要なAPI設定
 
 <details>
 <summary>🔧 Notion API設定</summary>
@@ -347,28 +288,6 @@ Gmail使用時の設定例：
 
 </details>
 
-## 🛠️ 開発環境
-
-### 依存関係の追加
-
-```bash
-# 新しいパッケージを追加
-uv add package-name
-
-# 開発用依存関係を追加
-uv add --dev package-name
-```
-
-### Python バージョン
-
-```bash
-# 使用中のPythonバージョン確認
-uv run python --version
-
-# 利用可能なPythonバージョン一覧
-uv python list
-```
-
 ## 📊 プロジェクト構成
 
 ```
@@ -382,7 +301,6 @@ pickles/
 ├── throughput/
 │   ├── __init__.py           # 分析処理モジュール
 │   ├── analyzer.py           # OpenAI感情・思考分析（統合クラス設計）
-│   ├── analysis_history.py   # AI分析履歴管理
 │   └── prompts/              # 分析プロンプト管理
 │       ├── __init__.py
 │       ├── domi_prompts.py
@@ -413,90 +331,11 @@ pickles/
 │   ├── weekly-report.yml     # GitHub Actions マルチユーザー実行
 │   └── setup-secrets.md      # GitHub Actions設定ガイド
 ├── .env                      # 環境変数（要作成）
-├── analysis_history.json     # AI分析履歴データ（自動生成）
 ├── pyproject.toml            # プロジェクト設定
 ├── pytest.ini                # pytest設定
 ├── capture_mock.py           # モックデータ生成スクリプト
 ├── uv.lock                   # 依存関係ロックファイル
 └── README.md                 # このファイル
-```
-
-## 🔄 スケジューラー
-
-デフォルトでは毎週月曜日の午前7時（JST）に実行されます。
-
-```python
-scheduler.add_job(job, trigger="cron", day_of_week="mon", hour=7, minute=0)
-```
-
-<details>
-<summary>⚡ なぜ **uv** を使用するのか？</summary>
-
-### **uv** が **pip** より速く・軽く・再現性が高い理由
-
-| 項目           | uv のしくみ                                                                                       | pip のしくみ                              | 効果                                               |
-| ------------ | --------------------------------------------------------------------------------------------- | ------------------------------------- | ------------------------------------------------ |
-| 実装           | **Rust 製バイナリ**（ネイティブ速度）                                                      | 純 Python スクリプト                        | 依存解決・ダウンロード・展開が 10-100× 高速⚡ |
-| 依存解決         | **PubGrub** アルゴリズムで一括計算（衝突原因も提示）                                                              | 従来の逐次バックトラック                          | 解決が determinisitic＋失敗理由が分かりやすい                   |
-| キャッシュ        | １か所 `~/.cache/uv` に wheel と Python 本体を保存 → 各 `.venv` へ **ハードリンク/CoW** 展開 | wheel は共通だが毎 `.venv` にフルコピー           | ディスク重複ゼロ；.venv 削除しても他プロジェクト無事                    |
-| Python バージョン | `uv install python 3.12` で同キャッシュに共存                                                           | 外部ツール（pyenv など）が必要                    | バージョン切替も１コマンド                                    |
-| ロックファイル      | `uv.lock` を自動生成・使用                                                                            | 手動 `requirements.txt` or 外部 pip-tools | CI／本番で完全再現 (`uv sync`)                           |
-| スクリプト実行      | PEP 723: ファイル冒頭に `# dependencies = [...]` → `uv run` で即席環境                                    | venv 作成＋pip install が必須               | 単発ツールをすぐ共有できる                                    |
-
-#### **Pickles プロジェクト** への具体的メリット
-
-1. **初回セットアップ３行**
-   ```bash
-   curl -LsSf https://astral.sh/uv/install.sh | sh
-   uv sync
-   uv run python main.py
-   ```
-
-2. **週次ジョブの依存更新が秒単位** — Notion-client や OpenAI などを追加しても解決が即完了。
-
-3. **環境事故ゼロ** — `uv run main.py` が venv を自動管理、システム Python を汚さない。
-
-4. **チーム／CI での再現性** — `uv.lock` をコミット → サーバで `uv sync && uv run main.py` でそのまま稼働。
-
-> **まとめ**  
-> uv は *Rust × PubGrub × グローバルキャッシュ* という構造で「速い・ディスクを食わない・再現性が高い」を実現。  
-> Pickles のような API 連携＋定期実行アプリでも導入は数分、得られるメンテコスト削減は長期。pip で困っていなくても一度 `uv init` で体感する価値があります。
-
-</details>
-
-## 🤖 GitHub Actions マルチユーザー実行
-
-複数ユーザーの分析を自動化するGitHub Actions機能が利用できます。
-
-### 機能概要
-- Google Sheetsからユーザー情報を読み込み
-- 各ユーザーに個別のレポートを配信
-- 手動実行または定期実行（毎週月曜9時）
-- デバッグモード対応
-
-### 実行パラメータ
-| パラメータ | 説明 | 選択肢 | デフォルト |
-|-----------|------|--------|------------|
-| `analysis_type` | 分析タイプ | `domi`, `aga` | `domi` |
-| `delivery_method` | 配信方法 | `email_html`, `email_text`, `console`, `file_text`, `file_html` | `email_html` |
-| `days_back` | 取得日数 | 整数値 | `7` |
-| `debug_mode` | デバッグモード | `true`, `false` | `false` |
-
-### 設定方法
-詳細な設定手順は`.github/workflows/setup-secrets.md`を参照してください：
-- GitHub Secrets設定
-- Google Service Account作成
-- Google Sheets API設定
-- スプレッドシート構造
-- 各ユーザーのNotion設定
-
-### マルチユーザー実行コマンド
-```bash
-# Google Sheetsからマルチユーザー実行
-python read_spreadsheet_and_execute.py --spreadsheet-id "SPREADSHEET_ID" --analysis domi --delivery email_html
-
-# 単体ユーザー実行（マルチユーザー対応オプション付き）
-python main.py --user-name "田中太郎" --email-to "tanaka@example.com" --notion-api-key "secret_xxx"
 ```
 
 ## 🧪 テスト
@@ -566,15 +405,3 @@ service_account_key.json
 - Google Service Accountは最小権限（Sheets読み取り、Docs読み取りのみ）
 - 実行環境は`test`環境を使用
 
-## 📚 Google Docs vs Notion比較
-
-| 項目 | Google Docs | Notion |
-|------|-------------|---------|
-| **設定の簡単さ** | Service Account設定が必要 | Integration作成のみ |
-| **書きやすさ** | 慣れ親しんだDoc形式 | 構造化されたデータベース |
-| **データ抽出** | マークダウン形式 | 豊富なプロパティ・ブロック |
-| **共有・権限** | Google アカウントベース | Workspace単位 |
-| **検索・フィルタ** | 日付ヘッダーベース | プロパティベース |
-| **適用場面** | シンプルな日記形式 | 構造化された記録管理 |
-
-どちらを選ぶかは、日記の書き方や管理スタイルによって決めてください。

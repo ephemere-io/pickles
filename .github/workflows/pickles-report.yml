@@ -1,11 +1,15 @@
-name: Multi-User Pickles Report
+name: Pickles Multi-User Report
 
 on:
   schedule:
     # 毎週日本時間月曜日の午前7時（前日のUTC 23:00）に実行
-    - cron: '0 22 * * 6'
-  workflow_dispatch: # 手動実行のみ有効（スケジュール実行を有効にする場合は上記のコメントを外す）
+    - cron: '0 22 * * 0'
+  workflow_dispatch: # 手動実行
     inputs:
+      spreadsheet_id:
+        description: 'スプレッドシートID'
+        required: true
+        type: string
       analysis_type:
         description: '分析タイプ'
         required: false
@@ -30,6 +34,14 @@ on:
         required: false
         default: '7'
         type: string
+      language:
+        description: '出力言語'
+        required: false
+        default: 'japanese'
+        type: choice
+        options:
+          - japanese
+          - english
       debug_mode:
         description: 'デバッグモード（詳細ログを出力）'
         required: false
@@ -57,12 +69,6 @@ jobs:
     - name: Install dependencies
       run: uv sync --frozen
     
-    - name: Create Google Service Account key file
-      env:
-        GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
-      run: |
-        echo "$GOOGLE_SERVICE_ACCOUNT_KEY" > service_account_key.json
-        
     - name: Run Multi-User Pickles analysis
       env:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -70,13 +76,22 @@ jobs:
         EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
         EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
         EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
-        GOOGLE_APPLICATION_CREDENTIALS: "service_account_key.json"
+        GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
       run: |
         # 環境変数から設定を取得
-        SPREADSHEET_ID="${{ secrets.SPREADSHEET_ID }}"
+        # 手動実行時は指定されたID、定期実行時は本番IDを使用
+        if [[ "${{ github.event_name }}" == "schedule" ]]; then
+          SPREADSHEET_ID="${{ secrets.SPREADSHEET_ID }}"
+          echo "📅 定期実行: 本番スプレッドシートを使用"
+        else
+          SPREADSHEET_ID="${{ github.event.inputs.spreadsheet_id }}"
+          echo "🔧 手動実行: 指定されたスプレッドシートを使用"
+        fi
+        
         ANALYSIS="${{ github.event.inputs.analysis_type || 'domi' }}"
         DELIVERY="${{ github.event.inputs.delivery_method || 'email_html' }}"
         DAYS="${{ github.event.inputs.days_back || '7' }}"
+        LANGUAGE="${{ github.event.inputs.language || 'japanese' }}"
         
         # 必須パラメータのチェック
         if [[ -z "$SPREADSHEET_ID" ]]; then
@@ -91,13 +106,14 @@ jobs:
           echo "Analysis Type: $ANALYSIS"
           echo "Delivery Method: $DELIVERY"
           echo "Days Back: $DAYS"
+          echo "Language: $LANGUAGE"
           echo "Environment variables status:"
           echo "OPENAI_API_KEY: ${OPENAI_API_KEY:+SET}"
           echo "EMAIL_USER: ${EMAIL_USER:+SET}"
           echo "EMAIL_PASS: ${EMAIL_PASS:+SET}"
           echo "EMAIL_HOST: ${EMAIL_HOST:+SET}"
           echo "EMAIL_PORT: ${EMAIL_PORT:+SET}"
-          echo "GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:+SET}"
+          echo "GOOGLE_SERVICE_ACCOUNT_KEY: ${GOOGLE_SERVICE_ACCOUNT_KEY:+SET}"
           echo "========================"
         fi
         
@@ -106,4 +122,5 @@ jobs:
           --spreadsheet-id "$SPREADSHEET_ID" \
           --analysis "$ANALYSIS" \
           --delivery "$DELIVERY" \
-          --days "$DAYS"
+          --days "$DAYS" \
+          --language "$LANGUAGE"
