@@ -7,8 +7,6 @@ from dotenv import load_dotenv
 from utils import AnalysisTypes, logger
 # プロンプト管理クラスをインポート
 from .prompts import DomiPrompts, AgaPrompts
-# 履歴管理クラスをインポート
-from .analysis_history import AnalysisHistory
 
 load_dotenv()
 
@@ -21,7 +19,7 @@ class AnalysisError(Exception):
 class DocumentAnalyzer:
     """ドキュメント分析クラス"""
     
-    def __init__(self, enable_history: bool = True, user_name: str = None, language: str = None):
+    def __init__(self, user_name: str = None, language: str = None):
         # テストモードの場合はモックを使用
         if os.getenv('PICKLES_TEST_MODE') == '1':
             from tests.fixtures.mock_handlers import mock_openai_api
@@ -29,8 +27,6 @@ class DocumentAnalyzer:
         else:
             self._client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         
-        self._enable_history = enable_history
-        self._history = AnalysisHistory() if enable_history else None
         self._user_name = user_name
         self._language = language
     
@@ -198,20 +194,11 @@ class DocumentAnalyzer:
         # データをフォーマット
         formatted_data = self._format_data_for_analysis(data)
         
-        # 履歴を使用する場合
-        if self._enable_history and self._history:
-            logger.info("過去の分析履歴を含めてAI分析を実行", "ai", analysis_type=analysis_type)
-            # プロンプト作成
-            prompt = self._create_analysis_prompt(formatted_data, analysis_type, language)
-            # 履歴を含むメッセージ配列を取得
-            messages = self._history.get_conversation_history(analysis_type, prompt)
-            logger.debug("履歴メッセージ構成完了", "ai", message_count=len(messages))
-        else:
-            logger.info("履歴なしで新規AI分析を実行", "ai", analysis_type=analysis_type, language=language)
-            # プロンプト作成
-            prompt = self._create_analysis_prompt(formatted_data, analysis_type, language)
-            # 単一メッセージとして送信
-            messages = [{"role": "user", "content": prompt}]
+        logger.info("AI分析を実行", "ai", analysis_type=analysis_type, language=language)
+        # プロンプト作成
+        prompt = self._create_analysis_prompt(formatted_data, analysis_type, language)
+        # 単一メッセージとして送信
+        messages = [{"role": "user", "content": prompt}]
 
         logger.debug(f"言語設定 @ analyser.py, _generate_insights", "ai", language=language)
 
@@ -238,11 +225,6 @@ class DocumentAnalyzer:
             
             logger.complete("AI分析処理", "ai", result_length=len(insights))
             
-            # 履歴に保存
-            if self._enable_history and self._history:
-                data_summary = f"{len(data)}件のデータ（平均{sum(len(item.get('text', '')) for item in data) // len(data)}文字）"
-                self._history.save_analysis(analysis_type, data_summary, insights)
-                logger.debug("分析結果を履歴に保存", "ai")
             
             return insights
             
@@ -252,8 +234,7 @@ class DocumentAnalyzer:
                         error_type=type(e).__name__,
                         error_message=str(e),
                         data_length=len(formatted_data),
-                        analysis_type=analysis_type,
-                        history_enabled=self._enable_history)
+                        analysis_type=analysis_type)
             raise AnalysisError(f"AI分析エラー: {e}")
     
     def _generate_context_insights(self, week_data: List[Dict[str, str]], context_data: List[Dict[str, str]], 
@@ -266,20 +247,11 @@ class DocumentAnalyzer:
         formatted_week_data = self._format_data_for_analysis(week_data)
         formatted_context_data = self._format_data_for_analysis(context_data)
         
-        # 履歴を使用する場合
-        if self._enable_history and self._history:
-            logger.info("過去の分析履歴を含めてコンテキスト付きAI分析を実行", "ai", analysis_type=analysis_type)
-            # プロンプト作成
-            prompt = self._create_context_analysis_prompt(formatted_week_data, formatted_context_data, analysis_type, language)
-            # 履歴を含むメッセージ配列を取得
-            messages = self._history.get_conversation_history(analysis_type, prompt)
-            logger.debug("履歴メッセージ構成完了", "ai", message_count=len(messages))
-        else:
-            logger.info("履歴なしで新規コンテキスト付きAI分析を実行", "ai", analysis_type=analysis_type, language=language)
-            # プロンプト作成
-            prompt = self._create_context_analysis_prompt(formatted_week_data, formatted_context_data, analysis_type, language)
-            # 単一メッセージとして送信
-            messages = [{"role": "user", "content": prompt}]
+        logger.info("コンテキスト付きAI分析を実行", "ai", analysis_type=analysis_type, language=language)
+        # プロンプト作成
+        prompt = self._create_context_analysis_prompt(formatted_week_data, formatted_context_data, analysis_type, language)
+        # 単一メッセージとして送信
+        messages = [{"role": "user", "content": prompt}]
 
         logger.debug(f"言語設定 @ analyser.py, _generate_context_insights", "ai", language=language)
 
@@ -307,13 +279,6 @@ class DocumentAnalyzer:
             
             logger.complete("AI分析処理（コンテキスト付き）", "ai", result_length=len(insights))
             
-            # 履歴に保存
-            if self._enable_history and self._history:
-                week_summary = f"{len(week_data)}件のデータ（平均{sum(len(item.get('text', '')) for item in week_data) // len(week_data)}文字）"
-                context_days = len(set(item.get('date', '')[:10] for item in context_data if item.get('date')))
-                context_summary = f"{len(context_data)}件のデータ（{context_days}日間、平均{sum(len(item.get('text', '')) for item in context_data) // len(context_data)}文字）"
-                self._history.save_analysis(analysis_type, f"週間: {week_summary}, コンテキスト: {context_summary}", insights)
-                logger.debug("分析結果を履歴に保存", "ai")
             
             return insights
             
@@ -324,8 +289,7 @@ class DocumentAnalyzer:
                         error_message=str(e),
                         week_data_length=len(formatted_week_data),
                         context_data_length=len(formatted_context_data),
-                        analysis_type=analysis_type,
-                        history_enabled=self._enable_history)
+                        analysis_type=analysis_type)
             raise AnalysisError(f"AI分析エラー: {e}")
     
     def _format_data_for_analysis(self, data: List[Dict[str, str]]) -> str:
@@ -350,30 +314,44 @@ class DocumentAnalyzer:
         
         return "\n\n".join(formatted_items)
     
-    def _create_analysis_prompt(self, formatted_data: str, analysis_type: str, language: str = "日本語") -> str:
+    def _create_analysis_prompt(self, formatted_data: str, analysis_type: str, language: str = "japanese") -> str:
+        
+        # 言語コードを自然言語名に変換
+        language_map = {
+            "japanese": "日本語",
+            "english": "English"
+        }
+        prompt_language = language_map.get(language, language)
 
-        logger.debug(f"言語設定 @ analyser.py, _create_analysis_prompt", "ai", language=language)
+        logger.debug(f"言語設定 @ analyser.py, _create_analysis_prompt", "ai", language=language, prompt_language=prompt_language)
 
         """分析タイプに応じたプロンプトを作成"""
         if analysis_type == AnalysisTypes.DOMI:
-            return DomiPrompts.create_prompt(formatted_data, self._user_name, language)
+            return DomiPrompts.create_prompt(formatted_data, self._user_name, prompt_language)
         elif analysis_type == AnalysisTypes.AGA:
-            return AgaPrompts.create_prompt(formatted_data, self._user_name, language)
+            return AgaPrompts.create_prompt(formatted_data, self._user_name, prompt_language)
         else:
             # フォールバック用の基本プロンプト
             user_prefix = f"ユーザー「{self._user_name}」さんの" if self._user_name else ""
             base_prompt = f"以下の{user_prefix}データを分析してください：\n\n{formatted_data}\n\n"
             return base_prompt + "このデータの特徴と傾向を分析してレポートを作成してください。"
     
-    def _create_context_analysis_prompt(self, week_data: str, context_data: str, analysis_type: str, language: str = "日本語") -> str:
+    def _create_context_analysis_prompt(self, week_data: str, context_data: str, analysis_type: str, language: str = "japanese") -> str:
+        
+        # 言語コードを自然言語名に変換
+        language_map = {
+            "japanese": "日本語",
+            "english": "English"
+        }
+        prompt_language = language_map.get(language, language)
 
         logger.debug(f"言語設定 @ analyser.py, _create_context_analysis_prompt", "ai", language=language)
 
         """コンテキスト付き分析タイプに応じたプロンプトを作成"""
         if analysis_type == AnalysisTypes.DOMI:
-            return DomiPrompts.create_context_prompt(week_data, context_data, self._user_name, language)
+            return DomiPrompts.create_context_prompt(week_data, context_data, self._user_name, prompt_language)
         elif analysis_type == AnalysisTypes.AGA:
-            return AgaPrompts.create_context_prompt(week_data, context_data, self._user_name, language)
+            return AgaPrompts.create_context_prompt(week_data, context_data, self._user_name, prompt_language)
         else:
             # フォールバック用の基本プロンプト
             user_prefix = f"ユーザー「{self._user_name}」さんの" if self._user_name else ""

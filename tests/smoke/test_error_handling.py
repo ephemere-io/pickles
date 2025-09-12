@@ -62,22 +62,6 @@ def test_invalid_days_value():
         print("\n✅ Invalid days value error handling test passed")
 
 
-@pytest.mark.smoke
-def test_invalid_history_value():
-    """無効な履歴オプション値を指定した場合のエラーハンドリング（モック使用）"""
-    mock_files = get_all_mock_files()
-    if not mock_files:
-        pytest.skip("No mock data available")
-    
-    with mock_environment(mock_files[0]):
-        result = run_main_command([
-            "--analysis", "domi",
-            "--delivery", "console",
-            "--history", "invalid_value"
-        ], timeout=10, use_mocks=True)
-        
-        assert_command_failure_with_message(result, ["error", "エラー", "invalid", "無効"])
-        print("\n✅ Invalid history value error handling test passed")
 
 
 @pytest.mark.smoke
@@ -89,7 +73,7 @@ def test_error_resilience_with_all_mock_files(mock_file):
         result = run_main_command([
             "--analysis", "domi",
             "--delivery", "console",
-            "--days", "7"
+            "--days", "45"
         ], timeout=30, use_mocks=True)
         
         # 正常終了することを確認

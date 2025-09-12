@@ -23,7 +23,7 @@ def test_help_command():
 def test_basic_console_execution(mock_file):
     """基本起動と完全な実行確認（全モックデータで実行）"""
     with mock_environment(mock_file):
-        result = run_main_command(["--delivery", "console", "--days", "30"], timeout=30, use_mocks=True)
+        result = run_main_command(["--delivery", "console", "--days", "45"], timeout=30, use_mocks=True)
         
         assert result.returncode == 0, f"Command failed: {result.stderr}"
         assert_mock_data_used(result, mock_file)
@@ -41,7 +41,7 @@ def test_basic_console_execution(mock_file):
 def test_file_output_execution(mock_file):
     """ファイル出力オプションの完全動作確認（全モックデータで実行）"""
     with mock_environment(mock_file):
-        result = run_main_command(["--delivery", "file_text", "--days", "30"], timeout=30, use_mocks=True)
+        result = run_main_command(["--delivery", "file_text", "--days", "45"], timeout=30, use_mocks=True)
         
         assert result.returncode == 0, f"Command failed: {result.stderr}"
         assert_mock_data_used(result, mock_file)
@@ -54,36 +54,20 @@ def test_file_output_execution(mock_file):
         print(f"\n✅ File output test passed for {mock_file}")
 
 
-@pytest.mark.smoke
-@pytest.mark.parametrize("mock_file", get_all_mock_files())
-def test_history_option(mock_file):
-    """履歴オプションの完全動作確認（全モックデータで実行）"""
-    with mock_environment(mock_file):
-        result = run_main_command(["--history", "off", "--delivery", "console", "--days", "30"], timeout=30, use_mocks=True)
-        
-        assert result.returncode == 0, f"Command failed: {result.stderr}"
-        assert_mock_data_used(result, mock_file)
-        assert_system_initialization(result)
-        
-        # 履歴機能無効の設定が反映されているか確認
-        assert "分析履歴機能無効" in result.stdout, "History disable log not found"
-        
-        print(f"\n✅ History option test passed for {mock_file}")
-
 
 @pytest.mark.smoke
 @pytest.mark.parametrize("mock_file", get_all_mock_files())
 def test_days_option(mock_file):
     """日数指定オプションの完全動作確認（全モックデータで実行）"""
     with mock_environment(mock_file):
-        result = run_main_command(["--days", "3", "--delivery", "console"], timeout=30, use_mocks=True)
+        result = run_main_command(["--days", "45", "--delivery", "console"], timeout=30, use_mocks=True)
         
         assert result.returncode == 0, f"Command failed: {result.stderr}"
         assert_mock_data_used(result, mock_file)
         assert_system_initialization(result)
         
         # 日数指定が反映されているか確認
-        assert "days=3" in result.stdout, "Days parameter not logged correctly"
+        assert "days=45" in result.stdout, "Days parameter not logged correctly"
         
         print(f"\n✅ Days option test passed for {mock_file}")
 

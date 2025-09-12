@@ -20,7 +20,7 @@ def test_analysis_types(mock_file, analysis):
         result = run_main_command([
             "--analysis", analysis,
             "--delivery", "console",
-            "--days", "30"
+            "--days", "45"
         ], timeout=30, use_mocks=True)
         
         assert result.returncode == 0, f"Command failed with {analysis}: {result.stderr}"
@@ -40,7 +40,7 @@ def test_delivery_methods(mock_file, delivery):
         result = run_main_command([
             "--delivery", delivery,
             "--analysis", "domi",
-            "--days", "30"
+            "--days", "45"
         ], timeout=30, use_mocks=True)
         
         assert result.returncode == 0, f"Command failed with {delivery}: {result.stderr}"
@@ -56,29 +56,24 @@ def test_delivery_methods(mock_file, delivery):
 
 @pytest.mark.smoke
 @pytest.mark.parametrize("mock_file", get_all_mock_files())
-@pytest.mark.parametrize("analysis,delivery,history", [
-    ("domi", "console", "on"),
-    ("aga", "file_text", "off"), 
-    ("domi", "file_html", "on"),
+@pytest.mark.parametrize("analysis,delivery", [
+    ("domi", "console"),
+    ("aga", "file_text"), 
+    ("domi", "file_html"),
 ])
-def test_option_combinations(mock_file, analysis, delivery, history):
+def test_option_combinations(mock_file, analysis, delivery):
     """主要なオプション組み合わせの完全動作確認（全モックデータで実行）"""
     with mock_environment(mock_file):
         result = run_main_command([
             "--analysis", analysis,
             "--delivery", delivery,
-            "--history", history,
-            "--days", "7"
+            "--days", "45"
         ], timeout=30, use_mocks=True)
         
-        assert result.returncode == 0, f"Command failed with {analysis}/{delivery}/{history}: {result.stderr}"
+        assert result.returncode == 0, f"Command failed with {analysis}/{delivery}: {result.stderr}"
         assert_mock_data_used(result)
         assert_system_initialization(result)
         assert_analysis_started(result, analysis)
         assert_delivery_started(result, delivery)
         
-        # 履歴オプションが正しく適用されているか確認
-        history_status = "有効" if history == "on" else "無効"
-        assert f"分析履歴機能{history_status}" in result.stdout, f"History option {history} not applied"
-        
-        print(f"\n✅ Combination {analysis}/{delivery}/{history} test passed for {mock_file}")
+        print(f"\n✅ Combination {analysis}/{delivery} test passed for {mock_file}")
