@@ -1,4 +1,4 @@
-name: Pickles Multi-User Report
+name: Pickles Multi-User Report Admin
 
 on:
   workflow_dispatch: # 手動実行
