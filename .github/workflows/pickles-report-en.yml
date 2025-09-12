@@ -9,6 +9,7 @@ on:
       spreadsheet_id:
         description: 'スプレッドシートID'
         required: true
+        default: ${{ secrets.SPREADSHEET_ID_EN_TESTERS_LIST }}
         type: string
       analysis_type:
         description: '分析タイプ'
@@ -32,12 +33,12 @@ on:
       days_back:
         description: '何日前からのデータを取得するか'
         required: false
-        default: '7'
+        default: '30'
         type: string
       language:
         description: '出力言語'
         required: false
-        default: 'japanese'
+        default: 'english'
         type: choice
         options:
           - japanese
@@ -79,19 +80,19 @@ jobs:
         GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
       run: |
         # 環境変数から設定を取得
-        # 手動実行時は指定されたID、定期実行時は本番IDを使用
+        # 定期実行・手動実行ともにSPREADSHEET_ID_EN_TESTERS_LISTを使用
         if [[ "${{ github.event_name }}" == "schedule" ]]; then
-          SPREADSHEET_ID="${{ secrets.SPREADSHEET_ID }}"
-          echo "📅 定期実行: 本番スプレッドシートを使用"
+          SPREADSHEET_ID="${{ secrets.SPREADSHEET_ID_EN_TESTERS_LIST }}"
+          echo "📅 定期実行: EN Testersスプレッドシートを使用"
         else
-          SPREADSHEET_ID="${{ github.event.inputs.spreadsheet_id }}"
-          echo "🔧 手動実行: 指定されたスプレッドシートを使用"
+          SPREADSHEET_ID="${{ github.event.inputs.spreadsheet_id || secrets.SPREADSHEET_ID_EN_TESTERS_LIST }}"
+          echo "🔧 手動実行: スプレッドシートID: ${SPREADSHEET_ID:0:10}..."
         fi
         
         ANALYSIS="${{ github.event.inputs.analysis_type || 'domi' }}"
         DELIVERY="${{ github.event.inputs.delivery_method || 'email_html' }}"
-        DAYS="${{ github.event.inputs.days_back || '7' }}"
-        LANGUAGE="${{ github.event.inputs.language || 'japanese' }}"
+        DAYS="${{ github.event.inputs.days_back || '30' }}"
+        LANGUAGE="${{ github.event.inputs.language || 'english' }}"
         
         # 必須パラメータのチェック
         if [[ -z "$SPREADSHEET_ID" ]]; then
