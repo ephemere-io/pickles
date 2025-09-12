@@ -4,9 +4,8 @@ on:
   workflow_dispatch: # 手動実行
     inputs:
       spreadsheet_id:
-        description: 'スプレッドシートID'
-        required: true
-        default: ${{ secrets.SPREADSHEET_ID_ADMIN_LIST }}
+        description: 'スプレッドシートID (空の場合はデフォルトのAdmin Listを使用)'
+        required: false
         type: string
       analysis_type:
         description: '分析タイプ'
