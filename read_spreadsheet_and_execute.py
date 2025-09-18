@@ -39,9 +39,9 @@ class GoogleSheetsReader:
         想定するスプレッドシート構造:
         A列: EMAIL_TO
         B列: NOTION_API_KEY  
-        C列: user name
-        D列: LANGUAGE
-        E列: GOOGLE_DOCS_URL
+        C列: GOOGLE_DOCS_URL
+        D列: user name
+        E列: LANGUAGE
         """
         try:
             # アクセステストを実行
@@ -68,9 +68,9 @@ class GoogleSheetsReader:
                     user_data = {
                         'email_to': row[0].strip() if row[0] else '',
                         'notion_api_key': row[1].strip() if row[1] else '',
-                        'user_name': row[2].strip() if row[2] else f'User {i-1}',
-                        'language' : row[3].strip() if len(row) > 3 and row[3] else 'japanese',
-                        'google_docs_url': row[4].strip() if len(row) > 4 and row[4] else '',
+                        'google_docs_url': row[2].strip() if len(row) > 2 and row[2] else '',
+                        'user_name': row[3].strip() if len(row) > 3 and row[3] else f'User {i-1}',
+                        'language': row[4].strip() if len(row) > 4 and row[4] else 'japanese',
                     }
                     
                     # 必須フィールドのバリデーション（email_toは必須、データソースは少なくとも一つ）
