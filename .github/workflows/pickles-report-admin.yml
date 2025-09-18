@@ -76,7 +76,7 @@ jobs:
         GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
       run: |
         # 環境変数から設定を取得（手動実行のみ）
-        # スプレッドシート構造: EMAIL_TO | NOTION_API_KEY | USER_NAME | LANGUAGE | GOOGLE_DOCS_URL
+        # スプレッドシート構造: EMAIL_TO | NOTION_API_KEY | GOOGLE_DOCS_URL | USER_NAME | LANGUAGE
         # データソース優先順位: Notion > Google Docs
         SPREADSHEET_ID="${{ github.event.inputs.spreadsheet_id || secrets.SPREADSHEET_ID_ADMIN_LIST }}"
         echo "🔧 手動実行: スプレッドシートID: ${SPREADSHEET_ID:0:10}..."
