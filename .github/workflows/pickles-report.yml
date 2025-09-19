@@ -75,7 +75,7 @@ jobs:
         # データソース優先順位: Notion > Google Docs
         if [[ "${{ github.event_name }}" == "schedule" ]]; then
           SPREADSHEET_ID="${{ secrets.SPREADSHEET_ID_USERS_LIST }}"
-          echo "📅 定期実行: 統合テスターリストを使用"
+          echo "📅 定期実行: 統合ユーザーリストを使用"
         else
           SPREADSHEET_ID="${{ github.event.inputs.spreadsheet_id || secrets.SPREADSHEET_ID_USERS_LIST }}"
           echo "🔧 手動実行: スプレッドシートID: ${SPREADSHEET_ID:0:10}..."
