@@ -7,7 +7,7 @@ on:
   workflow_dispatch: # 手動実行
     inputs:
       spreadsheet_id:
-        description: 'スプレッドシートID (空の場合はデフォルトの統合テスターリストを使用)'
+        description: 'スプレッドシートID (空の場合はデフォルトの統合ユーザーリストを使用)'
         required: false
         type: string
       analysis_type:
@@ -70,10 +70,9 @@ jobs:
         GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
       run: |
         # 環境変数から設定を取得
-        # 定期実行・手動実行ともに統合テスターリストを使用
+        # 定期実行・手動実行ともに統合ユーザーリストを使用
         # スプレッドシート構造: EMAIL_TO | NOTION_API_KEY | GOOGLE_DOCS_URL | USER_NAME | LANGUAGE
         # データソース優先順位: Notion > Google Docs
-        # 言語設定: 各ユーザーのLANGUAGE列（japanese/english）に従って個別配信
         if [[ "${{ github.event_name }}" == "schedule" ]]; then
           SPREADSHEET_ID="${{ secrets.SPREADSHEET_ID_USERS_LIST }}"
           echo "📅 定期実行: 統合テスターリストを使用"
