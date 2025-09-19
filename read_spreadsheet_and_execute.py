@@ -114,14 +114,14 @@ class GoogleSheetsReader:
             return []
 
 
-def execute_pickles_for_user(user_data: Dict[str, str], analysis_type: str, delivery_methods: str, days: int = 7, language: str = "japanese") -> bool:
+def execute_pickles_for_user(user_data: Dict[str, str], analysis_type: str, delivery_methods: str, days: int = 7) -> bool:
     """
     指定されたユーザーに対してPicklesを実行
     データソース優先順位: Notion > Google Docs
     """
     try:
-        # ユーザーデータから言語設定を取得、なければコマンドライン引数から取得
-        user_language = user_data.get('language', language)
+        # ユーザーデータから言語設定を取得（デフォルトはjapanese）
+        user_language = user_data.get('language', 'japanese')
         
         # データソースの決定（優先順位: Notion > Google Docs）
         cmd = [
@@ -148,10 +148,13 @@ def execute_pickles_for_user(user_data: Dict[str, str], analysis_type: str, deli
         
         logger.info(f"{user_data['user_name']}: {data_source}を使用", "execution")
         
+        # デバッグ: 実行コマンドをログ出力
+        logger.debug(f"実行コマンド", "execution", cmd=" ".join(cmd))
+        
         logger.start(f"{user_data['user_name']}のPickles実行 ({data_source})", "execution")
         
-        # Picklesを実行（元のcmdを使用）
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        # Picklesを実行（タイムアウトを600秒に延長）
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
         
         if result.returncode == 0:
             logger.complete(f"{user_data['user_name']}のPickles実行 ({data_source})", "execution")
@@ -166,7 +169,7 @@ def execute_pickles_for_user(user_data: Dict[str, str], analysis_type: str, deli
             return False
             
     except subprocess.TimeoutExpired:
-        logger.error("実行タイムアウト", "execution", user=user_data['user_name'], timeout=300)
+        logger.error("実行タイムアウト", "execution", user=user_data['user_name'], timeout=600)
         return False
     except Exception as e:
         logger.error("実行中の例外発生", "execution", user=user_data['user_name'], error=str(e))
@@ -177,11 +180,10 @@ def main():
     """メイン関数"""
     parser = argparse.ArgumentParser(description="Google Sheetsからユーザーデータを読み込んでPicklesを実行")
     parser.add_argument("--spreadsheet-id", required=True, help="Google SpreadsheetsのID")
-    parser.add_argument("--range", default="A1:D", help="読み込み範囲 (デフォルト: A1:D)")
+    parser.add_argument("--range", default="A1:E", help="読み込み範囲 (デフォルト: A1:E)")
     parser.add_argument("--analysis", default="domi", choices=["domi", "aga"], help="分析タイプ")
     parser.add_argument("--delivery", default="email_html", help="配信方法")
     parser.add_argument("--days", type=int, default=7, help="取得日数")
-    parser.add_argument("--language", default="japanese", help="出力言語")
     parser.add_argument("--service-account-key", help="サービスアカウントキーファイルのパス")
     
     args = parser.parse_args()
@@ -209,7 +211,7 @@ def main():
         for i, user_data in enumerate(user_data_list, 1):
             logger.info(f"[{i}/{total_count}] ユーザー処理開始", "execution", 
                        user=user_data['user_name'], progress=f"{i}/{total_count}")
-            if execute_pickles_for_user(user_data, args.analysis, args.delivery, args.days, args.language):
+            if execute_pickles_for_user(user_data, args.analysis, args.delivery, args.days):
                 success_count += 1
         
         # 実行結果サマリー
