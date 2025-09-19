@@ -31,14 +31,6 @@ on:
         required: false
         default: '30'
         type: string
-      language:
-        description: '出力言語'
-        required: false
-        default: 'japanese'
-        type: choice
-        options:
-          - japanese
-          - english
       debug_mode:
         description: 'デバッグモード（詳細ログを出力）'
         required: false
@@ -84,7 +76,6 @@ jobs:
         ANALYSIS="${{ github.event.inputs.analysis_type || 'domi' }}"
         DELIVERY="${{ github.event.inputs.delivery_method || 'email_html' }}"
         DAYS="${{ github.event.inputs.days_back || '30' }}"
-        LANGUAGE="${{ github.event.inputs.language || 'japanese' }}"
         
         # 必須パラメータのチェック
         if [[ -z "$SPREADSHEET_ID" ]]; then
@@ -99,7 +90,6 @@ jobs:
           echo "Analysis Type: $ANALYSIS"
           echo "Delivery Method: $DELIVERY"
           echo "Days Back: $DAYS"
-          echo "Language: $LANGUAGE"
           echo "Environment variables status:"
           echo "OPENAI_API_KEY: ${OPENAI_API_KEY:+SET}"
           echo "EMAIL_USER: ${EMAIL_USER:+SET}"
@@ -115,5 +105,4 @@ jobs:
           --spreadsheet-id "$SPREADSHEET_ID" \
           --analysis "$ANALYSIS" \
           --delivery "$DELIVERY" \
-          --days "$DAYS" \
-          --language "$LANGUAGE"
+          --days "$DAYS"
