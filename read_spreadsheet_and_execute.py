@@ -32,16 +32,16 @@ class GoogleSheetsReader:
             logger.error("Google Sheets統合サービス初期化失敗", "sheets", error=str(e))
             raise ValueError(f"Google Sheets初期化エラー: {e}")
     
-    def read_user_data(self, spreadsheet_id: str, range_name: str = "A1:D") -> List[Dict[str, str]]:
+    def read_user_data(self, spreadsheet_id: str, range_name: str = "A1:E") -> List[Dict[str, str]]:
         """
         スプレッドシートからユーザーデータを読み込む
         
         想定するスプレッドシート構造:
         A列: EMAIL_TO
         B列: NOTION_API_KEY  
-        C列: user name
-        D列: LANGUAGE
-        E列: その他（オプション）
+        C列: GOOGLE_DOCS_URL
+        D列: user name
+        E列: LANGUAGE
         """
         try:
             # アクセステストを実行
@@ -68,27 +68,35 @@ class GoogleSheetsReader:
                     user_data = {
                         'email_to': row[0].strip() if row[0] else '',
                         'notion_api_key': row[1].strip() if row[1] else '',
-                        'user_name': row[2].strip() if row[2] else f'User {i-1}',
-                        'language' : row[3].strip() if row[3] else 'japanese',
+                        'google_docs_url': row[2].strip() if len(row) > 2 and row[2] else '',
+                        'user_name': row[3].strip() if len(row) > 3 and row[3] else f'User {i-1}',
+                        'language': row[4].strip() if len(row) > 4 and row[4] else 'japanese',
                     }
                     
-                    # 必須フィールドのバリデーション
-                    if user_data['email_to'] and user_data['notion_api_key']:
-                        # デバッグ: APIキーの詳細を表示（最初と最後の文字のみ）
-                        api_key = user_data['notion_api_key']
-                        if len(api_key) > 10:
-                            api_key_info = f"{api_key[:4]}...{api_key[-4:]} (長さ: {len(api_key)}文字)"
-                        else:
-                            api_key_info = f"⚠️ APIキーが短すぎます: {len(api_key)}文字"
+                    # 必須フィールドのバリデーション（email_toは必須、データソースは少なくとも一つ）
+                    if user_data['email_to'] and (user_data['notion_api_key'] or user_data['google_docs_url']):
+                        # データソース情報の構築
+                        source_info = []
+                        if user_data['notion_api_key']:
+                            api_key = user_data['notion_api_key']
+                            if len(api_key) > 10:
+                                source_info.append(f"Notion: {api_key[:4]}...{api_key[-4:]}")
+                            else:
+                                source_info.append(f"Notion: ⚠️短いキー({len(api_key)}文字)")
+                        if user_data['google_docs_url']:
+                            doc_url = user_data['google_docs_url']
+                            # URLの最後の部分を表示
+                            url_display = doc_url[-20:] if len(doc_url) > 20 else doc_url
+                            source_info.append(f"GDocs: ...{url_display}")
                         
                         user_data_list.append(user_data)
                         logger.info("ユーザーデータ追加", "sheets", 
                                    user=user_data['user_name'], 
                                    email=user_data['email_to'], 
-                                   api_key_info=api_key_info)
+                                   sources=", ".join(source_info))
                     else:
                         logger.warning(f"行{i}: 必須フィールドが不足", "sheets", 
-                                      row=i, missing="EMAIL_TO, NOTION_API_KEY")
+                                      row=i, missing="EMAIL_TO および (NOTION_API_KEY または GOOGLE_DOCS_URL)")
                 else:
                     logger.warning(f"行{i}: 列数が不足", "sheets", row=i, required_columns=3)
             
@@ -109,11 +117,13 @@ class GoogleSheetsReader:
 def execute_pickles_for_user(user_data: Dict[str, str], analysis_type: str, delivery_methods: str, days: int = 7, language: str = "japanese") -> bool:
     """
     指定されたユーザーに対してPicklesを実行
+    データソース優先順位: Notion > Google Docs
     """
     try:
         # ユーザーデータから言語設定を取得、なければコマンドライン引数から取得
         user_language = user_data.get('language', language)
         
+        # データソースの決定（優先順位: Notion > Google Docs）
         cmd = [
             sys.executable, "main.py",
             "--analysis", analysis_type,
@@ -121,17 +131,30 @@ def execute_pickles_for_user(user_data: Dict[str, str], analysis_type: str, deli
             "--days", str(days),
             "--user-name", user_data['user_name'],
             "--email-to", user_data['email_to'],
-            "--notion-api-key", user_data['notion_api_key'],
             "--language", user_language
         ]
         
-        logger.start(f"{user_data['user_name']}のPickles実行", "execution")
+        if user_data.get('notion_api_key'):
+            # Notionを優先して使用
+            cmd.extend(["--source", "notion", "--notion-api-key", user_data['notion_api_key']])
+            data_source = "Notion"
+        elif user_data.get('google_docs_url'):
+            # Google Docsをフォールバックとして使用
+            cmd.extend(["--source", "gdocs", "--gdocs-url", user_data['google_docs_url']])
+            data_source = "Google Docs"
+        else:
+            logger.error(f"{user_data['user_name']}: データソースが設定されていません", "execution")
+            return False
+        
+        logger.info(f"{user_data['user_name']}: {data_source}を使用", "execution")
+        
+        logger.start(f"{user_data['user_name']}のPickles実行 ({data_source})", "execution")
         
         # Picklesを実行（元のcmdを使用）
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         
         if result.returncode == 0:
-            logger.complete(f"{user_data['user_name']}のPickles実行", "execution")
+            logger.complete(f"{user_data['user_name']}のPickles実行 ({data_source})", "execution")
             # 成功時もログを表示
             if result.stdout:
                 logger.debug("実行ログ出力", "execution", stdout=result.stdout)
