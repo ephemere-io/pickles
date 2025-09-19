@@ -31,16 +31,15 @@ on:
         required: false
         default: '30'
         type: string
-      debug_mode:
-        description: 'デバッグモード（詳細ログを出力）'
-        required: false
-        default: false
-        type: boolean
 
 jobs:
   send-report:
     runs-on: ubuntu-latest
     environment: test
+    strategy:
+      matrix:
+        batch: [1, 2, 3, 4]  # 4つのバッチで並列実行（保守性重視で余裕を持たせる）
+      max-parallel: 4
     
     steps:
     - name: Checkout repository
@@ -83,26 +82,25 @@ jobs:
           exit 1
         fi
         
-        # デバッグモードの確認
-        if [[ "${{ github.event.inputs.debug_mode }}" == "true" ]]; then
-          echo "=== Debug Mode Enabled ==="
-          echo "Spreadsheet ID: $SPREADSHEET_ID"
-          echo "Analysis Type: $ANALYSIS"
-          echo "Delivery Method: $DELIVERY"
-          echo "Days Back: $DAYS"
-          echo "Environment variables status:"
-          echo "OPENAI_API_KEY: ${OPENAI_API_KEY:+SET}"
-          echo "EMAIL_USER: ${EMAIL_USER:+SET}"
-          echo "EMAIL_PASS: ${EMAIL_PASS:+SET}"
-          echo "EMAIL_HOST: ${EMAIL_HOST:+SET}"
-          echo "EMAIL_PORT: ${EMAIL_PORT:+SET}"
-          echo "GOOGLE_SERVICE_ACCOUNT_KEY: ${GOOGLE_SERVICE_ACCOUNT_KEY:+SET}"
-          echo "========================"
-        fi
+        # 実行設定表示
+        echo "Spreadsheet ID: $SPREADSHEET_ID"
+        echo "Analysis Type: $ANALYSIS"
+        echo "Delivery Method: $DELIVERY"
+        echo "Days Back: $DAYS"
+        echo "Environment variables status:"
+        echo "OPENAI_API_KEY: ${OPENAI_API_KEY:+SET}"
+        echo "EMAIL_USER: ${EMAIL_USER:+SET}"
+        echo "EMAIL_PASS: ${EMAIL_PASS:+SET}"
+        echo "EMAIL_HOST: ${EMAIL_HOST:+SET}"
+        echo "EMAIL_PORT: ${EMAIL_PORT:+SET}"
+        echo "GOOGLE_SERVICE_ACCOUNT_KEY: ${GOOGLE_SERVICE_ACCOUNT_KEY:+SET}"
         
-        # Google Sheetsからマルチユーザー実行
+        # Google Sheetsからマルチユーザー実行（並列バッチ処理）
+        echo "🔄 バッチ${{ matrix.batch }}/4 開始"
         uv run python read_spreadsheet_and_execute.py \
           --spreadsheet-id "$SPREADSHEET_ID" \
           --analysis "$ANALYSIS" \
           --delivery "$DELIVERY" \
-          --days "$DAYS"
+          --days "$DAYS" \
+          --batch-id ${{ matrix.batch }} \
+          --total-batches 4

@@ -176,6 +176,29 @@ def execute_pickles_for_user(user_data: Dict[str, str], analysis_type: str, deli
         return False
 
 
+def filter_users_for_batch(user_data_list: List[Dict[str, str]], batch_id: int, total_batches: int) -> List[Dict[str, str]]:
+    """バッチ用にユーザーリストをフィルタリング（動的分割）"""
+    import math
+    
+    total_users = len(user_data_list)
+    users_per_batch = math.ceil(total_users / total_batches)
+    
+    start_index = (batch_id - 1) * users_per_batch
+    end_index = min(batch_id * users_per_batch, total_users)
+    
+    batch_users = user_data_list[start_index:end_index]
+    
+    logger.info(f"バッチ分割詳細", "execution",
+               total_users=total_users,
+               batch_id=batch_id,
+               total_batches=total_batches,
+               start_index=start_index,
+               end_index=end_index,
+               batch_size=len(batch_users))
+    
+    return batch_users
+
+
 def main():
     """メイン関数"""
     parser = argparse.ArgumentParser(description="Google Sheetsからユーザーデータを読み込んでPicklesを実行")
@@ -184,6 +207,8 @@ def main():
     parser.add_argument("--analysis", default="domi", choices=["domi", "aga"], help="分析タイプ")
     parser.add_argument("--delivery", default="email_html", help="配信方法")
     parser.add_argument("--days", type=int, default=7, help="取得日数")
+    parser.add_argument("--batch-id", type=int, help="バッチID（並列実行用）")
+    parser.add_argument("--total-batches", type=int, help="総バッチ数（並列実行用）")
     parser.add_argument("--service-account-key", help="サービスアカウントキーファイルのパス")
     
     args = parser.parse_args()
@@ -199,6 +224,12 @@ def main():
         if not user_data_list:
             logger.error("実行可能なユーザーデータが見つかりません", "execution")
             sys.exit(1)
+        
+        # バッチ処理（並列実行用）
+        if args.batch_id is not None and args.total_batches is not None:
+            user_data_list = filter_users_for_batch(user_data_list, args.batch_id, args.total_batches)
+            logger.info(f"バッチ{args.batch_id}/{args.total_batches}で処理", "execution", 
+                       batch_users=len(user_data_list))
         
         # 各ユーザーに対してPicklesを実行
         success_count = 0
