@@ -37,7 +37,8 @@ class PicklesSystem:
         language = user_config.get('language') if user_config else None
 
 
-        self._notion_input = NotionInput(api_key=notion_api_key)
+        self._notion_api_key = notion_api_key
+        self._notion_input = None  # NotionとGoogle Docs両対応のため、実際に使用時まで初期化を遅延
         self._gdocs_url = gdocs_url
         self._analyzer = DocumentAnalyzer(user_name=user_name, language=language)
         self._delivery = ReportDelivery(email_config=email_config)
@@ -160,6 +161,10 @@ class PicklesSystem:
     def _fetch_data(self, data_source: str, days: int) -> List[Dict[str, str]]:
         """データ取得"""
         if data_source == DataSources.NOTION:
+            # 遅延初期化: Google Docsユーザーは無効なAPIキーでもエラーにならないよう、
+            # Notion実際使用時のみNotionInputを初期化してAPI接続テストを実行
+            if self._notion_input is None:
+                self._notion_input = NotionInput(api_key=self._notion_api_key)
             return self._notion_input.fetch_notion_documents(days)
         elif data_source == DataSources.GDOCS:
             return GdocsInput().fetch_gdocs_documents(self._gdocs_url, days)
