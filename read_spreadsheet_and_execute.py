@@ -252,8 +252,11 @@ def main():
         if success_count == total_count:
             logger.success("すべてのユーザーの分析が正常完了", "execution")
             sys.exit(0)
+        elif success_count > 0:
+            logger.warning("一部のユーザーで分析に失敗したが、一部成功", "execution")
+            sys.exit(0)  # 部分成功は正常終了扱い
         else:
-            logger.warning("一部のユーザーで分析に失敗", "execution")
+            logger.error("すべてのユーザーで分析に失敗", "execution")
             sys.exit(1)
             
     except Exception as e:
