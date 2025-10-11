@@ -174,7 +174,7 @@ class ReportDelivery:
         try:
             msg = MIMEText(body, _charset="utf-8")
             msg["Subject"] = subject
-            msg["From"] = self.username
+            msg["From"] = "pickles@ephemere.io"
             msg["To"] = self.to_email
             
             with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
@@ -207,7 +207,7 @@ class ReportDelivery:
             
             msg = MIMEText(html_body, "html", _charset="utf-8")
             msg["Subject"] = subject
-            msg["From"] = self.username
+            msg["From"] = "pickles@ephemere.io"
             msg["To"] = self.to_email
             
             with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
