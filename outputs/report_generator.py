@@ -171,7 +171,7 @@ class ReportDelivery:
     <style type="text/css">
         @media screen and (min-width: 600px) {{
             .pc-header-padding {{ padding: 60px 100px !important; }}
-            .pc-content-padding {{ padding: 50px 80px 25px 80px !important; }}
+            .pc-content-padding {{ padding: 30px 80px 25px 80px !important; }}
             .pc-section-padding {{ padding: 0 80px 60px 80px !important; }}
             .pc-footer-padding {{ padding: 45px 100px !important; }}
             .pc-closing-padding {{ padding: 0 80px 50px 80px !important; }}
