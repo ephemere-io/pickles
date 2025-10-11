@@ -169,13 +169,13 @@ class ReportDelivery:
     <title>Pickles: to Ferment our Lives - Weekly Letter</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <style type="text/css">
-        @media screen and (min-width: 600px) {
-            .pc-header-padding { padding: 40px 60px !important; }
-            .pc-content-padding { padding: 30px 60px 15px 60px !important; }
-            .pc-section-padding { padding: 0 60px 40px 60px !important; }
-            .pc-footer-padding { padding: 25px 60px !important; }
-            .pc-closing-padding { padding: 30px 60px !important; }
-        }
+        @media screen and (min-width: 600px) {{
+            .pc-header-padding {{ padding: 40px 60px !important; }}
+            .pc-content-padding {{ padding: 30px 60px 15px 60px !important; }}
+            .pc-section-padding {{ padding: 0 60px 40px 60px !important; }}
+            .pc-footer-padding {{ padding: 25px 60px !important; }}
+            .pc-closing-padding {{ padding: 30px 60px !important; }}
+        }}
     </style>
 </head>
 <body style="margin: 0; padding: 0; background-color: #F8F7FA; font-family: 'Helvetica Neue', Arial, sans-serif; color: #1A1A1A;">
