@@ -170,11 +170,11 @@ class ReportDelivery:
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <style type="text/css">
         @media screen and (min-width: 600px) {{
-            .pc-header-padding {{ padding: 40px 60px !important; }}
-            .pc-content-padding {{ padding: 30px 60px 15px 60px !important; }}
-            .pc-section-padding {{ padding: 0 60px 40px 60px !important; }}
-            .pc-footer-padding {{ padding: 25px 60px !important; }}
-            .pc-closing-padding {{ padding: 30px 60px !important; }}
+            .pc-header-padding {{ padding: 50px 60px !important; }}
+            .pc-content-padding {{ padding: 40px 60px 20px 60px !important; }}
+            .pc-section-padding {{ padding: 0 60px 50px 60px !important; }}
+            .pc-footer-padding {{ padding: 35px 60px !important; }}
+            .pc-closing-padding {{ padding: 0 60px 40px 60px !important; }}
         }}
     </style>
 </head>
@@ -196,10 +196,10 @@ class ReportDelivery:
                     <!-- Header with title only -->
                     <tr>
                         <td align="center" valign="top" class="pc-header-padding" style="background: linear-gradient(135deg, #1A0F20 0%, #2D1B37 100%); padding: 20px 20px;">
-                            <h1 style="color: #FFFFFF; font-size: 22px; font-weight: 300; margin: 0 0 15px 0; letter-spacing: 0.5px; line-height: 1.2;">
+                            <h1 style="color: #FFFFFF; font-size: 26px; font-weight: 300; margin: 0 0 15px 0; letter-spacing: 0.5px; line-height: 1.4;">
                                 Pickles: to Ferment our Lives
                             </h1>
-                            <p style="color: rgba(255, 255, 255, 0.9); font-size: 16px; margin: 0; font-weight: 300;">
+                            <p style="color: rgba(255, 255, 255, 0.9); font-size: 18px; margin: 0; font-weight: 300; line-height: 1.5;">
                                 Weekly Letter · {date_str} · Week {week_num}
                             </p>
                         </td>
@@ -208,7 +208,7 @@ class ReportDelivery:
                     <!-- Letter content wrapper -->
                     <tr>
                         <td align="left" valign="top" class="pc-content-padding" style="padding: 20px 15px 10px 10px;">
-                            <p style="color: #2D1B37; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; font-style: italic;">
+                            <p style="color: #2D1B37; font-size: 18px; line-height: 1.8; margin: 0 0 20px 0; font-style: italic;">
                                 あなたの日々の記録から発酵した洞察をお届けします。
                             </p>
                         </td>
@@ -221,12 +221,12 @@ class ReportDelivery:
                                 <tr>
                                     <td align="left" valign="middle" style="padding-bottom: 12px;">
                                         <img src="cid:stats_icon" alt="Stats" width="26" height="26" style="border: none; vertical-align: middle; margin-right: 2px; opacity: 0.8;" />
-                                        <span style="color: #1A1A1A; font-size: 18px; font-weight: 500; vertical-align: middle;">記録の統計</span>
+                                        <span style="color: #1A1A1A; font-size: 20px; font-weight: 500; vertical-align: middle;">記録の統計</span>
                                     </td>
                                 </tr>
                                 <tr>
                                     <td align="left" valign="top" style="background: linear-gradient(135deg, #F8F7FA 0%, #F3F1F6 100%); border: 1px solid #E8E5ED; padding: 18px; border-radius: 8px;">
-                                        <pre style="font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace; font-size: 14px; color: #1A1A1A; margin: 0; white-space: pre-wrap; line-height: 1.6;">{statistics}</pre>
+                                        <pre style="font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace; font-size: 16px; color: #1A1A1A; margin: 0; white-space: pre-wrap; line-height: 1.8;">{statistics}</pre>
                                     </td>
                                 </tr>
                             </table>
@@ -240,12 +240,12 @@ class ReportDelivery:
                                 <tr>
                                     <td align="left" valign="middle" style="padding-bottom: 12px;">
                                         <img src="cid:insights_icon" alt="Insights" width="26" height="26" style="border: none; vertical-align: middle; margin-right: 2px; opacity: 0.8;" />
-                                        <span style="color: #1A1A1A; font-size: 18px; font-weight: 500; vertical-align: middle;">発酵した洞察</span>
+                                        <span style="color: #1A1A1A; font-size: 20px; font-weight: 500; vertical-align: middle;">発酵した洞察</span>
                                     </td>
                                 </tr>
                                 <tr>
                                     <td align="left" valign="top" style="background-color: #FFFFFF; border: 1px solid #E8E5ED; padding: 18px; border-radius: 8px; box-shadow: 0 2px 8px rgba(45, 27, 55, 0.05);">
-                                        <pre style="font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace; font-size: 14px; color: #1A1A1A; margin: 0; white-space: pre-wrap; line-height: 1.7;">{insights}</pre>
+                                        <pre style="font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace; font-size: 16px; color: #1A1A1A; margin: 0; white-space: pre-wrap; line-height: 1.9;">{insights}</pre>
                                     </td>
                                 </tr>
                             </table>
@@ -255,7 +255,7 @@ class ReportDelivery:
                     <!-- Letter closing -->
                     <tr>
                         <td align="center" valign="top" class="pc-closing-padding" style="padding: 0 15px 30px 15px;">
-                            <p style="color: #2D1B37; font-size: 16px; line-height: 1.6; margin: 0; font-style: italic; text-align: center;">
+                            <p style="color: #2D1B37; font-size: 18px; line-height: 1.8; margin: 0; font-style: italic; text-align: center;">
                                 また来週、新たな発見をお楽しみに。
                             </p>
                         </td>
@@ -267,10 +267,10 @@ class ReportDelivery:
                             <table border="0" cellpadding="0" cellspacing="0" width="100%">
                                 <tr>
                                     <td align="center" valign="top">
-                                        <p style="color: #FFFFFF; font-size: 14px; margin: 0 0 8px 0;">
+                                        <p style="color: #FFFFFF; font-size: 16px; margin: 0 0 8px 0; line-height: 1.5;">
                                             分析対象: <strong>{analysis_result.get('data_count', 0)}件</strong> の記録
                                         </p>
-                                        <p style="color: #FFFFFF; font-size: 14px; margin: 0 0 15px 0;">
+                                        <p style="color: #FFFFFF; font-size: 16px; margin: 0 0 15px 0; line-height: 1.5;">
                                             発酵完了: {date_str}
                                         </p>
                                         <p style="color: rgba(255, 255, 255, 0.7); font-size: 12px; margin: 0; letter-spacing: 0.5px;">
