@@ -390,8 +390,8 @@ class ReportDelivery:
                     with open(image_path, 'rb') as img_file:
                         img_data = img_file.read()
                     
-                    # MIMEImageオブジェクトを作成
-                    img = MIMEImage(img_data)
+                    # MIMEImageオブジェクトを作成（PNG形式を明示）
+                    img = MIMEImage(img_data, _subtype='png')
                     img.add_header('Content-ID', f'<{cid}>')
                     img.add_header('Content-Disposition', 'inline', filename=os.path.basename(image_path))
                     msg.attach(img)
