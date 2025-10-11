@@ -440,12 +440,25 @@ def main() -> None:
         logger.error("分析実行失敗", "system", error=results["error"])
     else:
         success_methods = [k for k, v in results.items() if "成功" in str(v)]
-        logger.success("分析実行完了", "system", 
-                     success_count=len(success_methods),
-                     methods=list(results.keys()))
+        failed_methods = [k for k, v in results.items() if "失敗" in str(v) or "エラー" in str(v)]
+        
+        if failed_methods:
+            logger.error("一部配信方法が失敗", "system", 
+                        failed_methods=failed_methods, 
+                        success_count=len(success_methods),
+                        failed_count=len(failed_methods))
+        else:
+            logger.success("分析実行完了", "system", 
+                         success_count=len(success_methods),
+                         methods=list(results.keys()))
     
-    # エラーがある場合は終了コード1で終了
+    # エラーまたは配信失敗がある場合は終了コード1で終了
     if "error" in results:
+        sys.exit(1)
+    
+    # 配信結果に失敗が含まれている場合も終了コード1で終了
+    failed_deliveries = [k for k, v in results.items() if "失敗" in str(v) or "エラー" in str(v)]
+    if failed_deliveries:
         sys.exit(1)
 
 

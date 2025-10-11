@@ -65,6 +65,7 @@ jobs:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         EMAIL_USER: ${{ secrets.EMAIL_USER }}
         EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+        EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
         EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
         EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
         GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
@@ -100,6 +101,7 @@ jobs:
         echo "OPENAI_API_KEY: ${OPENAI_API_KEY:+SET}"
         echo "EMAIL_USER: ${EMAIL_USER:+SET}"
         echo "EMAIL_PASS: ${EMAIL_PASS:+SET}"
+        echo "EMAIL_FROM: ${EMAIL_FROM:+SET}"
         echo "EMAIL_HOST: ${EMAIL_HOST:+SET}"
         echo "EMAIL_PORT: ${EMAIL_PORT:+SET}"
         echo "GOOGLE_SERVICE_ACCOUNT_KEY: ${GOOGLE_SERVICE_ACCOUNT_KEY:+SET}"
