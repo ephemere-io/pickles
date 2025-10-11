@@ -170,11 +170,12 @@ class ReportDelivery:
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <style type="text/css">
         @media screen and (min-width: 600px) {{
-            .pc-header-padding {{ padding: 60px 80px !important; }}
-            .pc-content-padding {{ padding: 50px 80px 25px 80px !important; }}
-            .pc-section-padding {{ padding: 0 80px 60px 80px !important; }}
-            .pc-footer-padding {{ padding: 45px 80px !important; }}
-            .pc-closing-padding {{ padding: 0 80px 50px 80px !important; }}
+            .pc-header-padding {{ padding: 60px 100px !important; }}
+            .pc-content-padding {{ padding: 50px 100px 25px 100px !important; }}
+            .pc-section-padding {{ padding: 0 100px 60px 100px !important; }}
+            .pc-footer-padding {{ padding: 45px 100px !important; }}
+            .pc-closing-padding {{ padding: 0 100px 50px 100px !important; }}
+            .pc-main-table {{ max-width: 900px !important; }}
         }}
     </style>
 </head>
@@ -184,7 +185,7 @@ class ReportDelivery:
         <tr>
             <td align="center" valign="top">
                 <!-- Responsive container -->
-                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 800px; background-color: #FFFFFF; box-shadow: 0 4px 12px rgba(45, 27, 55, 0.1); overflow: hidden;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" class="pc-main-table" style="max-width: 800px; background-color: #FFFFFF; box-shadow: 0 4px 12px rgba(45, 27, 55, 0.1); overflow: hidden;">
                     
                     <!-- Top cover image -->
                     <tr>
@@ -196,7 +197,7 @@ class ReportDelivery:
                     <!-- Header with title only -->
                     <tr>
                         <td align="center" valign="top" class="pc-header-padding" style="background: linear-gradient(135deg, #1A0F20 0%, #2D1B37 100%); padding: 25px 20px;">
-                            <h1 style="color: #FFFFFF; font-size: 28px; font-weight: 300; margin: 0 0 18px 0; letter-spacing: 0.5px; line-height: 1.4;">
+                            <h1 style="color: #FFFFFF; font-size: 24px; font-weight: 300; margin: 0 0 18px 0; letter-spacing: 0.5px; line-height: 1.4;">
                                 Pickles: to Ferment our Lives
                             </h1>
                             <p style="color: rgba(255, 255, 255, 0.9); font-size: 14px; margin: 0; font-weight: 300; line-height: 1.5;">
@@ -209,7 +210,7 @@ class ReportDelivery:
                     <tr>
                         <td align="left" valign="top" class="pc-content-padding" style="padding: 25px 15px 15px 15px;">
                             <p style="color: #2D1B37; font-size: 18px; line-height: 1.8; margin: 0 0 20px 0; font-style: italic;">
-                                あなたの日々の記録から発酵した洞察をお届けします。
+                                あなたの日々の記録からPicklesによる分析をお届けします。
                             </p>
                         </td>
                     </tr>
@@ -220,7 +221,7 @@ class ReportDelivery:
                             <table border="0" cellpadding="0" cellspacing="0" width="100%">
                                 <tr>
                                     <td align="left" valign="middle" style="padding-bottom: 12px;">
-                                        <img src="cid:stats_icon" alt="Stats" width="28" height="28" style="border: none; vertical-align: middle; margin-right: 2px; opacity: 0.8;" />
+                                        <img src="cid:stats_icon" alt="Stats" width="30" height="30" style="border: none; vertical-align: middle; margin-right: 2px; opacity: 0.8;" />
                                         <span style="color: #1A1A1A; font-size: 20px; font-weight: 500; vertical-align: middle;">記録の統計</span>
                                     </td>
                                 </tr>
@@ -239,8 +240,8 @@ class ReportDelivery:
                             <table border="0" cellpadding="0" cellspacing="0" width="100%">
                                 <tr>
                                     <td align="left" valign="middle" style="padding-bottom: 12px;">
-                                        <img src="cid:insights_icon" alt="Insights" width="28" height="28" style="border: none; vertical-align: middle; margin-right: 2px; opacity: 0.8;" />
-                                        <span style="color: #1A1A1A; font-size: 20px; font-weight: 500; vertical-align: middle;">深い気づき</span>
+                                        <img src="cid:insights_icon" alt="Insights" width="30" height="30" style="border: none; vertical-align: middle; margin-right: 2px; opacity: 0.8;" />
+                                        <span style="color: #1A1A1A; font-size: 20px; font-weight: 500; vertical-align: middle;">Picklesによる分析</span>
                                     </td>
                                 </tr>
                                 <tr>
@@ -274,7 +275,7 @@ class ReportDelivery:
                                             発酵完了: {date_str}
                                         </p>
                                         <p style="color: rgba(255, 255, 255, 0.7); font-size: 12px; margin: 0; letter-spacing: 0.5px;">
-                                            POWERED BY PICKLES AI FERMENTATION SYSTEM
+                                            POWERED BY PICKLES
                                         </p>
                                     </td>
                                 </tr>
