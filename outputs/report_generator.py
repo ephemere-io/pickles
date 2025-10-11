@@ -36,6 +36,7 @@ class ReportDelivery:
             self.username = os.getenv("EMAIL_USER")
             self.password = os.getenv("EMAIL_PASS")
             self.to_email = os.getenv("EMAIL_TO")
+            self.from_email = os.getenv("EMAIL_FROM", self.username)  # デフォルトはusernameを使用
             self.user_name = None
     
     def deliver_report(self, 
@@ -174,7 +175,7 @@ class ReportDelivery:
         try:
             msg = MIMEText(body, _charset="utf-8")
             msg["Subject"] = subject
-            msg["From"] = "pickles@ephemere.io"
+            msg["From"] = self.from_email
             msg["To"] = self.to_email
             
             with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
@@ -207,7 +208,7 @@ class ReportDelivery:
             
             msg = MIMEText(html_body, "html", _charset="utf-8")
             msg["Subject"] = subject
-            msg["From"] = "pickles@ephemere.io"
+            msg["From"] = self.from_email
             msg["To"] = self.to_email
             
             with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:

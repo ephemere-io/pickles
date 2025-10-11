@@ -45,11 +45,12 @@ GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account-key.json
 OPENAI_API_KEY=your_openai_api_key_here
 
 # メール設定
-EMAIL_USER=your_email@example.com
-EMAIL_PASS=your_email_password_here
-EMAIL_TO=recipient@example.com
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
+EMAIL_USER=your_smtp_username_here        # SMTP認証用ユーザー名（IAMユーザーIDなど）
+EMAIL_PASS=your_email_password_here       # SMTP認証用パスワード
+EMAIL_FROM=pickles@ephemere.io           # メール送信者として表示されるアドレス
+EMAIL_TO=recipient@example.com           # 送信先メールアドレス
+EMAIL_HOST=smtp.gmail.com                # SMTPサーバーホスト
+EMAIL_PORT=587                           # SMTPポート番号
 ```
 
 ## 📋 コマンドライン引数リファレンス
@@ -282,7 +283,20 @@ uv run python main.py --help
 Gmail使用時の設定例：
 - `EMAIL_HOST`: smtp.gmail.com
 - `EMAIL_PORT`: 587
+- `EMAIL_USER`: Gmailアドレスまたは認証用ユーザー名
 - `EMAIL_PASS`: アプリパスワードを使用（通常のパスワードではない）
+- `EMAIL_FROM`: 送信者として表示したいメールアドレス（通常は`EMAIL_USER`と同じ）
+
+AWS SES使用時の設定例：
+- `EMAIL_HOST`: email-smtp.us-east-1.amazonaws.com
+- `EMAIL_PORT`: 587
+- `EMAIL_USER`: SMTP認証用IAMユーザーのAccess Key ID
+- `EMAIL_PASS`: SMTP認証用IAMユーザーのSecret Access Key
+- `EMAIL_FROM`: 検証済みドメインのメールアドレス（例: pickles@ephemere.io）
+
+**重要**: `EMAIL_USER`（認証）と`EMAIL_FROM`（表示）は別の概念です。
+- `EMAIL_USER`: SMTP認証に使用（IAMユーザーIDやGmailアドレス）
+- `EMAIL_FROM`: メール受信者に表示される送信者アドレス
 
 [Googleアプリパスワードの設定方法](https://support.google.com/accounts/answer/185833)
 
