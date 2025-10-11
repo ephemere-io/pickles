@@ -139,11 +139,11 @@ class ReportDelivery:
         # カバー画像（週に応じて変化）
         cover_image = f"cover-image-{week}.png"
         
-        # アイコン（週に応じて循環）
+        # アイコン（固定アサイン）
         icon_numbers = [1, 2, 3, 4]  # icon.png, icon-2.png, icon-3.png, icon-4.png
         main_icon = f"icon{'-' + str(icon_numbers[(week - 1) % len(icon_numbers)]) if (week - 1) % len(icon_numbers) > 0 else ''}.png"
-        stats_icon = f"icon-{icon_numbers[(week + 0) % len(icon_numbers)]}.png"
-        insights_icon = f"icon-{icon_numbers[(week + 1) % len(icon_numbers)]}.png"
+        stats_icon = "icon-2.png"  # 記録の統計は常にicon-2.png
+        insights_icon = "icon.png"  # 発酵した洞察は常にicon.png
         
         return {
             "cover": os.path.join(base_path, cover_image),
@@ -169,66 +169,55 @@ class ReportDelivery:
     <title>Pickles: to Ferment our Lives - Weekly Letter</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 </head>
-<body style="margin: 0; padding: 0; background-color: #F8F7FA; font-family: 'Helvetica Neue', Arial, sans-serif; color: #2D1B37;">
+<body style="margin: 0; padding: 0; background-color: #F8F7FA; font-family: 'Helvetica Neue', Arial, sans-serif; color: #1A1A1A;">
     <!-- Main container table -->
     <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F8F7FA;">
         <tr>
-            <td align="center" valign="top" style="padding: 20px 0;">
-                <!-- 600px container -->
-                <table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #FFFFFF; box-shadow: 0 4px 12px rgba(45, 27, 55, 0.1); border-radius: 12px; overflow: hidden;">
+            <td align="center" valign="top">
+                <!-- Responsive container -->
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 800px; background-color: #FFFFFF; box-shadow: 0 4px 12px rgba(45, 27, 55, 0.1); border-radius: 12px 12px 0 0; overflow: hidden;">
                     
                     <!-- Top cover image -->
                     <tr>
                         <td align="center" valign="top" style="padding: 0;">
-                            <img src="cid:cover_image" alt="Pickles Cover" width="600" height="100" style="border: none; display: block; width: 100%; height: 100px; object-fit: cover;" />
+                            <img src="cid:cover_image" alt="Pickles Cover" width="100%" height="100" style="border: none; display: block; width: 100%; height: 100px; object-fit: cover;" />
                         </td>
                     </tr>
                     
-                    <!-- Header with main icon and title -->
+                    <!-- Header with title only -->
                     <tr>
-                        <td align="center" valign="top" style="background: linear-gradient(135deg, #2D1B37 0%, #4A3259 100%); padding: 40px 30px;">
-                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                                <tr>
-                                    <td align="center" valign="middle">
-                                        <img src="cid:main_icon" alt="Pickles Icon" width="48" height="48" style="border: none; margin-bottom: 20px; filter: invert(1);" />
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td align="center" valign="middle">
-                                        <h1 style="color: #FFFFFF; font-size: 28px; font-weight: 300; margin: 0; letter-spacing: 1px; line-height: 1.2;">
-                                            Pickles: to Ferment our Lives
-                                        </h1>
-                                        <p style="color: rgba(255, 255, 255, 0.8); font-size: 16px; margin: 15px 0 0 0; font-weight: 300;">
-                                            Weekly Letter · {date_str} · Week {week_num}
-                                        </p>
-                                    </td>
-                                </tr>
-                            </table>
+                        <td align="center" valign="top" style="background: linear-gradient(135deg, #1A0F20 0%, #2D1B37 100%); padding: 30px 20px;">
+                            <h1 style="color: #FFFFFF; font-size: 24px; font-weight: 300; margin: 0 0 15px 0; letter-spacing: 0.5px; line-height: 1.2;">
+                                Pickles: to Ferment our Lives
+                            </h1>
+                            <p style="color: rgba(255, 255, 255, 0.9); font-size: 16px; margin: 0; font-weight: 300;">
+                                Weekly Letter · {date_str} · Week {week_num}
+                            </p>
                         </td>
                     </tr>
                     
                     <!-- Letter content wrapper -->
                     <tr>
-                        <td align="left" valign="top" style="padding: 40px 40px 20px 40px;">
-                            <p style="color: #4A3259; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0; font-style: italic;">
-                                今週もお疲れさまでした。あなたの日々の記録から発酵した洞察をお届けします。
+                        <td align="left" valign="top" style="padding: 30px 20px 20px 20px;">
+                            <p style="color: #2D1B37; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0; font-style: italic;">
+                                あなたの日々の記録から発酵した洞察をお届けします。
                             </p>
                         </td>
                     </tr>
                     
                     <!-- Statistics Section -->
                     <tr>
-                        <td align="left" valign="top" style="padding: 0 40px 30px 40px;">
+                        <td align="left" valign="top" style="padding: 0 20px 30px 20px;">
                             <table border="0" cellpadding="0" cellspacing="0" width="100%">
                                 <tr>
                                     <td align="left" valign="middle" style="padding-bottom: 15px;">
-                                        <img src="cid:stats_icon" alt="Stats" width="24" height="24" style="border: none; vertical-align: middle; margin-right: 12px; opacity: 0.7;" />
-                                        <span style="color: #2D1B37; font-size: 20px; font-weight: 500; vertical-align: middle;">記録の統計</span>
+                                        <img src="cid:stats_icon" alt="Stats" width="24" height="24" style="border: none; vertical-align: middle; margin-right: 8px; opacity: 0.8;" />
+                                        <span style="color: #1A1A1A; font-size: 20px; font-weight: 500; vertical-align: middle;">記録の統計</span>
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td align="left" valign="top" style="background: linear-gradient(135deg, #F8F7FA 0%, #F3F1F6 100%); border: 1px solid #E8E5ED; padding: 25px; border-radius: 8px;">
-                                        <pre style="font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace; font-size: 14px; color: #4A3259; margin: 0; white-space: pre-wrap; line-height: 1.6;">{statistics}</pre>
+                                    <td align="left" valign="top" style="background: linear-gradient(135deg, #F8F7FA 0%, #F3F1F6 100%); border: 1px solid #E8E5ED; padding: 20px; border-radius: 8px;">
+                                        <pre style="font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace; font-size: 14px; color: #1A1A1A; margin: 0; white-space: pre-wrap; line-height: 1.6;">{statistics}</pre>
                                     </td>
                                 </tr>
                             </table>
@@ -237,17 +226,17 @@ class ReportDelivery:
                     
                     <!-- Insights Section -->
                     <tr>
-                        <td align="left" valign="top" style="padding: 0 40px 40px 40px;">
+                        <td align="left" valign="top" style="padding: 0 20px 40px 20px;">
                             <table border="0" cellpadding="0" cellspacing="0" width="100%">
                                 <tr>
                                     <td align="left" valign="middle" style="padding-bottom: 15px;">
-                                        <img src="cid:insights_icon" alt="Insights" width="24" height="24" style="border: none; vertical-align: middle; margin-right: 12px; opacity: 0.7;" />
-                                        <span style="color: #2D1B37; font-size: 20px; font-weight: 500; vertical-align: middle;">発酵した洞察</span>
+                                        <img src="cid:insights_icon" alt="Insights" width="24" height="24" style="border: none; vertical-align: middle; margin-right: 8px; opacity: 0.8;" />
+                                        <span style="color: #1A1A1A; font-size: 20px; font-weight: 500; vertical-align: middle;">発酵した洞察</span>
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td align="left" valign="top" style="background-color: #FFFFFF; border: 1px solid #E8E5ED; padding: 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(45, 27, 55, 0.05);">
-                                        <pre style="font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace; font-size: 14px; color: #2D1B37; margin: 0; white-space: pre-wrap; line-height: 1.7;">{insights}</pre>
+                                    <td align="left" valign="top" style="background-color: #FFFFFF; border: 1px solid #E8E5ED; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(45, 27, 55, 0.05);">
+                                        <pre style="font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace; font-size: 14px; color: #1A1A1A; margin: 0; white-space: pre-wrap; line-height: 1.7;">{insights}</pre>
                                     </td>
                                 </tr>
                             </table>
@@ -256,8 +245,8 @@ class ReportDelivery:
                     
                     <!-- Letter closing -->
                     <tr>
-                        <td align="center" valign="top" style="padding: 0 40px 40px 40px;">
-                            <p style="color: #4A3259; font-size: 15px; line-height: 1.6; margin: 0; font-style: italic; text-align: center;">
+                        <td align="center" valign="top" style="padding: 0 20px 40px 20px;">
+                            <p style="color: #2D1B37; font-size: 16px; line-height: 1.6; margin: 0; font-style: italic; text-align: center;">
                                 また来週、新たな発見をお楽しみに。
                             </p>
                         </td>
@@ -265,17 +254,17 @@ class ReportDelivery:
                     
                     <!-- Footer with info -->
                     <tr>
-                        <td align="center" valign="top" style="background-color: #F8F7FA; padding: 25px 40px; border-top: 1px solid #E8E5ED;">
+                        <td align="center" valign="top" style="background-color: #FFFFFF; padding: 25px 20px; border-top: 1px solid #E8E5ED;">
                             <table border="0" cellpadding="0" cellspacing="0" width="100%">
                                 <tr>
                                     <td align="center" valign="top">
-                                        <p style="color: #6B5B73; font-size: 13px; margin: 0 0 8px 0;">
+                                        <p style="color: #1A1A1A; font-size: 14px; margin: 0 0 8px 0;">
                                             分析対象: <strong>{analysis_result.get('data_count', 0)}件</strong> の記録
                                         </p>
-                                        <p style="color: #6B5B73; font-size: 13px; margin: 0 0 15px 0;">
+                                        <p style="color: #1A1A1A; font-size: 14px; margin: 0 0 15px 0;">
                                             発酵完了: {date_str}
                                         </p>
-                                        <p style="color: #8B7A93; font-size: 11px; margin: 0; letter-spacing: 0.5px;">
+                                        <p style="color: #6B5B73; font-size: 12px; margin: 0; letter-spacing: 0.5px;">
                                             POWERED BY PICKLES AI FERMENTATION SYSTEM
                                         </p>
                                     </td>
@@ -287,7 +276,7 @@ class ReportDelivery:
                     <!-- Bottom cover image -->
                     <tr>
                         <td align="center" valign="top" style="padding: 0;">
-                            <img src="cid:cover_image_bottom" alt="Pickles Cover Bottom" width="600" height="100" style="border: none; display: block; width: 100%; height: 100px; object-fit: cover;" />
+                            <img src="cid:cover_image_bottom" alt="Pickles Cover Bottom" width="100%" height="100" style="border: none; display: block; width: 100%; height: 100px; object-fit: cover; border-radius: 0 0 12px 12px;" />
                         </td>
                     </tr>
                     
