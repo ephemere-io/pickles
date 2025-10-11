@@ -28,6 +28,7 @@ class ReportDelivery:
             self.username = os.getenv("EMAIL_USER")
             self.password = os.getenv("EMAIL_PASS")
             self.to_email = email_config.get('email_to')
+            self.from_email = os.getenv("EMAIL_FROM", self.username)  # デフォルトはusernameを使用
             self.user_name = email_config.get('user_name')
         else:
             # デフォルトの環境変数設定
