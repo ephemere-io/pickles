@@ -170,11 +170,11 @@ class ReportDelivery:
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <style type="text/css">
         @media screen and (min-width: 600px) {{
-            .pc-header-padding {{ padding: 50px 60px !important; }}
-            .pc-content-padding {{ padding: 40px 60px 20px 60px !important; }}
-            .pc-section-padding {{ padding: 0 60px 50px 60px !important; }}
-            .pc-footer-padding {{ padding: 35px 60px !important; }}
-            .pc-closing-padding {{ padding: 0 60px 40px 60px !important; }}
+            .pc-header-padding {{ padding: 60px 80px !important; }}
+            .pc-content-padding {{ padding: 50px 80px 25px 80px !important; }}
+            .pc-section-padding {{ padding: 0 80px 60px 80px !important; }}
+            .pc-footer-padding {{ padding: 45px 80px !important; }}
+            .pc-closing-padding {{ padding: 0 80px 50px 80px !important; }}
         }}
     </style>
 </head>
@@ -195,11 +195,11 @@ class ReportDelivery:
                     
                     <!-- Header with title only -->
                     <tr>
-                        <td align="center" valign="top" class="pc-header-padding" style="background: linear-gradient(135deg, #1A0F20 0%, #2D1B37 100%); padding: 20px 20px;">
-                            <h1 style="color: #FFFFFF; font-size: 26px; font-weight: 300; margin: 0 0 15px 0; letter-spacing: 0.5px; line-height: 1.4;">
+                        <td align="center" valign="top" class="pc-header-padding" style="background: linear-gradient(135deg, #1A0F20 0%, #2D1B37 100%); padding: 25px 20px;">
+                            <h1 style="color: #FFFFFF; font-size: 28px; font-weight: 300; margin: 0 0 18px 0; letter-spacing: 0.5px; line-height: 1.4;">
                                 Pickles: to Ferment our Lives
                             </h1>
-                            <p style="color: rgba(255, 255, 255, 0.9); font-size: 18px; margin: 0; font-weight: 300; line-height: 1.5;">
+                            <p style="color: rgba(255, 255, 255, 0.9); font-size: 14px; margin: 0; font-weight: 300; line-height: 1.5;">
                                 Weekly Letter · {date_str} · Week {week_num}
                             </p>
                         </td>
@@ -207,7 +207,7 @@ class ReportDelivery:
                     
                     <!-- Letter content wrapper -->
                     <tr>
-                        <td align="left" valign="top" class="pc-content-padding" style="padding: 20px 15px 10px 10px;">
+                        <td align="left" valign="top" class="pc-content-padding" style="padding: 25px 15px 15px 15px;">
                             <p style="color: #2D1B37; font-size: 18px; line-height: 1.8; margin: 0 0 20px 0; font-style: italic;">
                                 あなたの日々の記録から発酵した洞察をお届けします。
                             </p>
@@ -216,11 +216,11 @@ class ReportDelivery:
                     
                     <!-- Statistics Section -->
                     <tr>
-                        <td align="left" valign="top" class="pc-section-padding" style="padding: 0 15px 25px 15px;">
+                        <td align="left" valign="top" class="pc-section-padding" style="padding: 0 15px 35px 15px;">
                             <table border="0" cellpadding="0" cellspacing="0" width="100%">
                                 <tr>
                                     <td align="left" valign="middle" style="padding-bottom: 12px;">
-                                        <img src="cid:stats_icon" alt="Stats" width="26" height="26" style="border: none; vertical-align: middle; margin-right: 2px; opacity: 0.8;" />
+                                        <img src="cid:stats_icon" alt="Stats" width="28" height="28" style="border: none; vertical-align: middle; margin-right: 2px; opacity: 0.8;" />
                                         <span style="color: #1A1A1A; font-size: 20px; font-weight: 500; vertical-align: middle;">記録の統計</span>
                                     </td>
                                 </tr>
@@ -235,12 +235,12 @@ class ReportDelivery:
                     
                     <!-- Insights Section -->
                     <tr>
-                        <td align="left" valign="top" class="pc-section-padding" style="padding: 0 15px 30px 15px;">
+                        <td align="left" valign="top" class="pc-section-padding" style="padding: 0 15px 40px 15px;">
                             <table border="0" cellpadding="0" cellspacing="0" width="100%">
                                 <tr>
                                     <td align="left" valign="middle" style="padding-bottom: 12px;">
-                                        <img src="cid:insights_icon" alt="Insights" width="26" height="26" style="border: none; vertical-align: middle; margin-right: 2px; opacity: 0.8;" />
-                                        <span style="color: #1A1A1A; font-size: 20px; font-weight: 500; vertical-align: middle;">発酵した洞察</span>
+                                        <img src="cid:insights_icon" alt="Insights" width="28" height="28" style="border: none; vertical-align: middle; margin-right: 2px; opacity: 0.8;" />
+                                        <span style="color: #1A1A1A; font-size: 20px; font-weight: 500; vertical-align: middle;">深い気づき</span>
                                     </td>
                                 </tr>
                                 <tr>
@@ -254,7 +254,7 @@ class ReportDelivery:
                     
                     <!-- Letter closing -->
                     <tr>
-                        <td align="center" valign="top" class="pc-closing-padding" style="padding: 0 15px 30px 15px;">
+                        <td align="center" valign="top" class="pc-closing-padding" style="padding: 0 15px 40px 15px;">
                             <p style="color: #2D1B37; font-size: 18px; line-height: 1.8; margin: 0; font-style: italic; text-align: center;">
                                 また来週、新たな発見をお楽しみに。
                             </p>
@@ -263,7 +263,7 @@ class ReportDelivery:
                     
                     <!-- Footer with info -->
                     <tr>
-                        <td align="center" valign="top" class="pc-footer-padding" style="background: linear-gradient(135deg, #1A0F20 0%, #2D1B37 100%); padding: 15px 20px;">
+                        <td align="center" valign="top" class="pc-footer-padding" style="background: linear-gradient(135deg, #1A0F20 0%, #2D1B37 100%); padding: 20px 20px;">
                             <table border="0" cellpadding="0" cellspacing="0" width="100%">
                                 <tr>
                                     <td align="center" valign="top">
