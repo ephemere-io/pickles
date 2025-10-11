@@ -1,8 +1,11 @@
 import os
 import datetime
 import html
+import calendar
 from typing import Dict, List, Optional
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.image import MIMEImage
 import smtplib
 from dotenv import load_dotenv
 
@@ -112,55 +115,188 @@ class ReportDelivery:
         
         return "\n".join(report_parts)
     
+    def _get_week_of_month(self, date: datetime.datetime = None) -> int:
+        """その月の第何週目かを取得（1-5）"""
+        if date is None:
+            date = datetime.datetime.now()
+        
+        # その月の1日を取得
+        first_day = date.replace(day=1)
+        # 第1週目の開始日を計算（月曜日基準）
+        first_monday = first_day - datetime.timedelta(days=first_day.weekday())
+        
+        # 現在の日付が第何週目かを計算
+        days_diff = (date - first_monday).days
+        week_number = (days_diff // 7) + 1
+        
+        # 1-5の範囲に制限
+        return min(max(week_number, 1), 5)
+    
+    def _get_image_paths(self, week: int) -> Dict[str, str]:
+        """週に応じた画像パスを取得"""
+        base_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
+        
+        # カバー画像（週に応じて変化）
+        cover_image = f"cover-image-{week}.png"
+        
+        # アイコン（週に応じて循環）
+        icon_numbers = [1, 2, 3, 4]  # icon.png, icon-2.png, icon-3.png, icon-4.png
+        main_icon = f"icon{'-' + str(icon_numbers[(week - 1) % len(icon_numbers)]) if (week - 1) % len(icon_numbers) > 0 else ''}.png"
+        stats_icon = f"icon-{icon_numbers[(week + 0) % len(icon_numbers)]}.png"
+        insights_icon = f"icon-{icon_numbers[(week + 1) % len(icon_numbers)]}.png"
+        
+        return {
+            "cover": os.path.join(base_path, cover_image),
+            "main": os.path.join(base_path, main_icon),
+            "stats": os.path.join(base_path, stats_icon),
+            "insights": os.path.join(base_path, insights_icon)
+        }
+    
     def _format_html_report(self, analysis_result: Dict[str, str]) -> str:
-        """HTML形式のレポートをフォーマット"""
-        current_date = datetime.datetime.now().strftime("%Y年%m月%d日")
+        """HTML形式のレポートをフォーマット（週刊お手紙デザイン）"""
+        current_date = datetime.datetime.now()
+        date_str = current_date.strftime("%Y年%m月%d日")
+        week_num = self._get_week_of_month(current_date)
         
         # HTMLエスケープ処理
         statistics = html.escape(analysis_result.get("statistics", "統計情報なし"))
         insights = html.escape(analysis_result.get("insights", "分析結果なし"))
         
-        return f"""
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>Pickles Weekly Report</title>
-            <style>
-                body {{ font-family: Arial, sans-serif; margin: 20px; }}
-                .header {{ background-color: #4CAF50; color: white; padding: 10px; text-align: center; }}
-                .section {{ margin: 20px 0; }}
-                .stats {{ background-color: #f9f9f9; padding: 15px; border-left: 4px solid #4CAF50; }}
-                .insights {{ padding: 15px; }}
-                .footer {{ text-align: center; color: #666; margin-top: 30px; }}
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <h1>📊 Pickles Weekly Report</h1>
-                <p>{current_date}</p>
-            </div>
-            
-            <div class="section">
-                <h2>📈 データ統計</h2>
-                <div class="stats">
-                    <pre>{statistics}</pre>
-                </div>
-            </div>
-            
-            <div class="section">
-                <h2>🧠 AI分析インサイト</h2>
-                <div class="insights">
-                    <pre>{insights}</pre>
-                </div>
-            </div>
-            
-            <div class="footer">
-                <p>分析対象データ数: {analysis_result.get('data_count', 0)}件</p>
-                <p>生成日時: {current_date}</p>
-            </div>
-        </body>
-        </html>
-        """
+        return f"""<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>Pickles: to Ferment our Lives - Weekly Letter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+</head>
+<body style="margin: 0; padding: 0; background-color: #F8F7FA; font-family: 'Helvetica Neue', Arial, sans-serif; color: #2D1B37;">
+    <!-- Main container table -->
+    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F8F7FA;">
+        <tr>
+            <td align="center" valign="top" style="padding: 20px 0;">
+                <!-- 600px container -->
+                <table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #FFFFFF; box-shadow: 0 4px 12px rgba(45, 27, 55, 0.1); border-radius: 12px; overflow: hidden;">
+                    
+                    <!-- Top cover image -->
+                    <tr>
+                        <td align="center" valign="top" style="padding: 0;">
+                            <img src="cid:cover_image" alt="Pickles Cover" width="600" height="100" style="border: none; display: block; width: 100%; height: 100px; object-fit: cover;" />
+                        </td>
+                    </tr>
+                    
+                    <!-- Header with main icon and title -->
+                    <tr>
+                        <td align="center" valign="top" style="background: linear-gradient(135deg, #2D1B37 0%, #4A3259 100%); padding: 40px 30px;">
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <tr>
+                                    <td align="center" valign="middle">
+                                        <img src="cid:main_icon" alt="Pickles Icon" width="48" height="48" style="border: none; margin-bottom: 20px; filter: invert(1);" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="center" valign="middle">
+                                        <h1 style="color: #FFFFFF; font-size: 28px; font-weight: 300; margin: 0; letter-spacing: 1px; line-height: 1.2;">
+                                            Pickles: to Ferment our Lives
+                                        </h1>
+                                        <p style="color: rgba(255, 255, 255, 0.8); font-size: 16px; margin: 15px 0 0 0; font-weight: 300;">
+                                            Weekly Letter · {date_str} · Week {week_num}
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                    <!-- Letter content wrapper -->
+                    <tr>
+                        <td align="left" valign="top" style="padding: 40px 40px 20px 40px;">
+                            <p style="color: #4A3259; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0; font-style: italic;">
+                                今週もお疲れさまでした。あなたの日々の記録から発酵した洞察をお届けします。
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Statistics Section -->
+                    <tr>
+                        <td align="left" valign="top" style="padding: 0 40px 30px 40px;">
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <tr>
+                                    <td align="left" valign="middle" style="padding-bottom: 15px;">
+                                        <img src="cid:stats_icon" alt="Stats" width="24" height="24" style="border: none; vertical-align: middle; margin-right: 12px; opacity: 0.7;" />
+                                        <span style="color: #2D1B37; font-size: 20px; font-weight: 500; vertical-align: middle;">記録の統計</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="left" valign="top" style="background: linear-gradient(135deg, #F8F7FA 0%, #F3F1F6 100%); border: 1px solid #E8E5ED; padding: 25px; border-radius: 8px;">
+                                        <pre style="font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace; font-size: 14px; color: #4A3259; margin: 0; white-space: pre-wrap; line-height: 1.6;">{statistics}</pre>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                    <!-- Insights Section -->
+                    <tr>
+                        <td align="left" valign="top" style="padding: 0 40px 40px 40px;">
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <tr>
+                                    <td align="left" valign="middle" style="padding-bottom: 15px;">
+                                        <img src="cid:insights_icon" alt="Insights" width="24" height="24" style="border: none; vertical-align: middle; margin-right: 12px; opacity: 0.7;" />
+                                        <span style="color: #2D1B37; font-size: 20px; font-weight: 500; vertical-align: middle;">発酵した洞察</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="left" valign="top" style="background-color: #FFFFFF; border: 1px solid #E8E5ED; padding: 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(45, 27, 55, 0.05);">
+                                        <pre style="font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace; font-size: 14px; color: #2D1B37; margin: 0; white-space: pre-wrap; line-height: 1.7;">{insights}</pre>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                    <!-- Letter closing -->
+                    <tr>
+                        <td align="center" valign="top" style="padding: 0 40px 40px 40px;">
+                            <p style="color: #4A3259; font-size: 15px; line-height: 1.6; margin: 0; font-style: italic; text-align: center;">
+                                また来週、新たな発見をお楽しみに。
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer with info -->
+                    <tr>
+                        <td align="center" valign="top" style="background-color: #F8F7FA; padding: 25px 40px; border-top: 1px solid #E8E5ED;">
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <tr>
+                                    <td align="center" valign="top">
+                                        <p style="color: #6B5B73; font-size: 13px; margin: 0 0 8px 0;">
+                                            分析対象: <strong>{analysis_result.get('data_count', 0)}件</strong> の記録
+                                        </p>
+                                        <p style="color: #6B5B73; font-size: 13px; margin: 0 0 15px 0;">
+                                            発酵完了: {date_str}
+                                        </p>
+                                        <p style="color: #8B7A93; font-size: 11px; margin: 0; letter-spacing: 0.5px;">
+                                            POWERED BY PICKLES AI FERMENTATION SYSTEM
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                    <!-- Bottom cover image -->
+                    <tr>
+                        <td align="center" valign="top" style="padding: 0;">
+                            <img src="cid:cover_image_bottom" alt="Pickles Cover Bottom" width="600" height="100" style="border: none; display: block; width: 100%; height: 100px; object-fit: cover;" />
+                        </td>
+                    </tr>
+                    
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>"""
     
     def _send_text_email(self, subject: str, body: str) -> bool:
         """テキストメールを送信"""
@@ -190,7 +326,7 @@ class ReportDelivery:
             raise OutputError(f"テキストメール送信エラー: {e}")
     
     def _send_html_email(self, subject: str, html_body: str) -> bool:
-        """HTMLメールを送信"""
+        """HTMLメールを送信（CID画像埋め込み対応）"""
         # テストモードの場合はモックを使用
         if os.getenv('PICKLES_TEST_MODE') == '1':
             logger.info("テストモード: HTMLメール送信をスキップ", "email", 
@@ -207,10 +343,18 @@ class ReportDelivery:
                         from_user=self.username, 
                         smtp_server=f"{self.smtp_host}:{self.smtp_port}")
             
-            msg = MIMEText(html_body, "html", _charset="utf-8")
+            # マルチパートメッセージを作成
+            msg = MIMEMultipart('related')
             msg["Subject"] = subject
             msg["From"] = self.from_email
             msg["To"] = self.to_email
+            
+            # HTMLコンテンツを作成
+            html_part = MIMEText(html_body, "html", _charset="utf-8")
+            msg.attach(html_part)
+            
+            # 画像を埋め込み
+            self._attach_images(msg)
             
             with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
                 logger.debug("SMTPサーバーに接続", "email")
@@ -226,6 +370,50 @@ class ReportDelivery:
         except Exception as e:
             logger.error("HTMLメール送信エラー", "email", error=str(e))
             raise OutputError(f"HTMLメール送信エラー: {e}")
+
+    def _attach_images(self, msg: MIMEMultipart) -> None:
+        """画像をCIDとしてメールに添付（週刊デザイン対応）"""
+        try:
+            week_num = self._get_week_of_month()
+            image_paths = self._get_image_paths(week_num)
+            
+            # CIDと画像パスのマッピング
+            image_mappings = [
+                ("cover_image", image_paths["cover"]),
+                ("cover_image_bottom", image_paths["cover"]),  # 上下同じカバー画像
+                ("main_icon", image_paths["main"]),
+                ("stats_icon", image_paths["stats"]),
+                ("insights_icon", image_paths["insights"])
+            ]
+            
+            attached_count = 0
+            for cid, image_path in image_mappings:
+                if os.path.exists(image_path):
+                    with open(image_path, 'rb') as img_file:
+                        img_data = img_file.read()
+                    
+                    # MIMEImageオブジェクトを作成
+                    img = MIMEImage(img_data)
+                    img.add_header('Content-ID', f'<{cid}>')
+                    img.add_header('Content-Disposition', 'inline', filename=os.path.basename(image_path))
+                    msg.attach(img)
+                    
+                    attached_count += 1
+                    logger.debug("画像を添付", "email", 
+                                image_path=image_path, 
+                                cid=cid,
+                                week=week_num)
+                else:
+                    logger.warning("画像ファイルが見つかりません", "email", 
+                                  image_path=image_path, cid=cid)
+            
+            logger.info("画像添付完了", "email", 
+                       attached_count=attached_count, 
+                       total_images=len(image_mappings),
+                       week=week_num)
+                
+        except Exception as e:
+            logger.error("画像添付エラー", "email", error=str(e))
     
     def _save_text_file(self, content: str, filename: Optional[str] = None) -> str:
         """テキストファイルに保存"""
