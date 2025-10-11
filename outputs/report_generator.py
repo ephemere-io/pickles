@@ -171,10 +171,11 @@ class ReportDelivery:
     <style type="text/css">
         @media screen and (min-width: 600px) {{
             .pc-header-padding {{ padding: 60px 100px !important; }}
-            .pc-content-padding {{ padding: 50px 100px 25px 100px !important; }}
-            .pc-section-padding {{ padding: 0 100px 60px 100px !important; }}
+            .pc-content-padding {{ padding: 50px 80px 25px 80px !important; }}
+            .pc-section-padding {{ padding: 0 80px 60px 80px !important; }}
             .pc-footer-padding {{ padding: 45px 100px !important; }}
-            .pc-closing-padding {{ padding: 0 100px 50px 100px !important; }}
+            .pc-closing-padding {{ padding: 0 80px 50px 80px !important; }}
+            .pc-content-box {{ padding: 25px !important; }}
             .pc-main-table {{ max-width: 900px !important; }}
         }}
     </style>
@@ -221,12 +222,12 @@ class ReportDelivery:
                             <table border="0" cellpadding="0" cellspacing="0" width="100%">
                                 <tr>
                                     <td align="left" valign="middle" style="padding-bottom: 12px;">
-                                        <img src="cid:stats_icon" alt="Stats" width="30" height="30" style="border: none; vertical-align: middle; margin-right: 2px; opacity: 0.8;" />
+                                        <img src="cid:stats_icon" alt="Stats" width="32" height="32" style="border: none; vertical-align: middle; margin-right: 2px; opacity: 0.8;" />
                                         <span style="color: #1A1A1A; font-size: 20px; font-weight: 500; vertical-align: middle;">記録の統計</span>
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td align="left" valign="top" style="background: linear-gradient(135deg, #F8F7FA 0%, #F3F1F6 100%); border: 1px solid #E8E5ED; padding: 18px; border-radius: 8px;">
+                                    <td align="left" valign="top" class="pc-content-box" style="background: linear-gradient(135deg, #F8F7FA 0%, #F3F1F6 100%); border: 1px solid #E8E5ED; padding: 18px; border-radius: 8px;">
                                         <pre style="font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace; font-size: 16px; color: #1A1A1A; margin: 0; white-space: pre-wrap; line-height: 1.8;">{statistics}</pre>
                                     </td>
                                 </tr>
@@ -240,12 +241,12 @@ class ReportDelivery:
                             <table border="0" cellpadding="0" cellspacing="0" width="100%">
                                 <tr>
                                     <td align="left" valign="middle" style="padding-bottom: 12px;">
-                                        <img src="cid:insights_icon" alt="Insights" width="30" height="30" style="border: none; vertical-align: middle; margin-right: 2px; opacity: 0.8;" />
+                                        <img src="cid:insights_icon" alt="Insights" width="32" height="32" style="border: none; vertical-align: middle; margin-right: 2px; opacity: 0.8;" />
                                         <span style="color: #1A1A1A; font-size: 20px; font-weight: 500; vertical-align: middle;">Picklesによる分析</span>
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td align="left" valign="top" style="background-color: #FFFFFF; border: 1px solid #E8E5ED; padding: 18px; border-radius: 8px; box-shadow: 0 2px 8px rgba(45, 27, 55, 0.05);">
+                                    <td align="left" valign="top" class="pc-content-box" style="background-color: #FFFFFF; border: 1px solid #E8E5ED; padding: 18px; border-radius: 8px; box-shadow: 0 2px 8px rgba(45, 27, 55, 0.05);">
                                         <pre style="font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace; font-size: 16px; color: #1A1A1A; margin: 0; white-space: pre-wrap; line-height: 1.9;">{insights}</pre>
                                     </td>
                                 </tr>
