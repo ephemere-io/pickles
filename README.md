@@ -297,6 +297,22 @@ GOOGLE_SERVICE_ACCOUNT_KEY={"type":"service_account","project_id":"your-project"
 - 日付ヘッダーは`# YYYY-MM-DD`形式で記述
 - 各ヘッダー以下が該当日の日誌エントリになる
 
+**Google Docs使用時の権限設定:**
+
+Google Docsをデータソースとして使用する場合、使用する環境に応じて以下のService Accountメールアドレスを**閲覧者**として共有してください:
+
+| 環境 | Service Accountメールアドレス |
+|------|------------------------------|
+| Prototype（テスト・開発） | `pickles-sheets-reader@pickles-467502.iam.gserviceaccount.com` |
+| Production（本番運用） | `pickles-sheets-reader@pickles-reports.iam.gserviceaccount.com` |
+
+**共有手順:**
+1. Google Docsを開く
+2. 右上の「共有」ボタンをクリック
+3. 上記の該当するService Accountメールアドレスを入力
+4. 権限を「閲覧者」に設定
+5. 「送信」をクリック
+
 </details>
 
 <details>
