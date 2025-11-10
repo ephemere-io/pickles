@@ -38,7 +38,7 @@ on:
 jobs:
   send-report:
     runs-on: ubuntu-latest
-    environment: prototype
+    environment: test
     strategy:
       matrix:
         batch: [1, 2, 3, 4]  # 4つのバッチで並列実行（保守性重視で余裕を持たせる）
