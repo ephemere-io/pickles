@@ -1,0 +1,117 @@
+name: Pickles Multi-User Report (Production)
+
+on:
+  schedule:
+    # 毎週日本時間月曜日の午前7時（前日のUTC 23:00）に実行
+    - cron: '0 22 * * 0'
+  workflow_dispatch: # 手動実行
+    inputs:
+      spreadsheet_id:
+        description: 'スプレッドシートID (空の場合はデフォルトの統合ユーザーリストを使用)'
+        required: false
+        type: string
+      analysis_type:
+        description: '分析タイプ'
+        required: false
+        default: 'domi'
+        type: choice
+        options:
+          - domi
+          - aga
+      delivery_method:
+        description: '配信方法'
+        required: false
+        default: 'email_html'
+        type: choice
+        options:
+          - email_html
+          - email_text
+          - console
+          - file_text
+          - file_html
+      days_back:
+        description: '何日前からのデータを取得するか'
+        required: false
+        default: '30'
+        type: string
+
+jobs:
+  send-report:
+    runs-on: ubuntu-latest
+    environment: production
+    strategy:
+      matrix:
+        batch: [1, 2, 3, 4]  # 4つのバッチで並列実行（保守性重視で余裕を持たせる）
+      max-parallel: 4
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
+        cache-dependency-glob: "uv.lock"
+
+    - name: Set up Python
+      run: uv python install 3.12
+
+    - name: Install dependencies
+      run: uv sync --frozen
+
+    - name: Run Multi-User Pickles analysis
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        EMAIL_USER: ${{ secrets.EMAIL_USER }}
+        EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+        EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+        EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
+        EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
+        GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+      run: |
+        # 環境変数から設定を取得
+        # 定期実行・手動実行ともに統合ユーザーリストを使用
+        # スプレッドシート構造: EMAIL_TO | NOTION_API_KEY | GOOGLE_DOCS_URL | USER_NAME | LANGUAGE
+        # データソース優先順位: Notion > Google Docs
+        if [[ "${{ github.event_name }}" == "schedule" ]]; then
+          SPREADSHEET_ID="${{ secrets.SPREADSHEET_ID_USERS_LIST }}"
+          echo "📅 定期実行: 統合ユーザーリストを使用"
+        else
+          SPREADSHEET_ID="${{ github.event.inputs.spreadsheet_id || secrets.SPREADSHEET_ID_USERS_LIST }}"
+          echo "🔧 手動実行: スプレッドシートID: ${SPREADSHEET_ID:0:10}..."
+        fi
+
+        ANALYSIS="${{ github.event.inputs.analysis_type || 'domi' }}"
+        DELIVERY="${{ github.event.inputs.delivery_method || 'email_html' }}"
+        DAYS="${{ github.event.inputs.days_back || '30' }}"
+
+        # 必須パラメータのチェック
+        if [[ -z "$SPREADSHEET_ID" ]]; then
+          echo "❌ ERROR: SPREADSHEET_ID is not set in secrets"
+          exit 1
+        fi
+
+        # 実行設定表示
+        echo "Spreadsheet ID: $SPREADSHEET_ID"
+        echo "Analysis Type: $ANALYSIS"
+        echo "Delivery Method: $DELIVERY"
+        echo "Days Back: $DAYS"
+        echo "Environment variables status:"
+        echo "OPENAI_API_KEY: ${OPENAI_API_KEY:+SET}"
+        echo "EMAIL_USER: ${EMAIL_USER:+SET}"
+        echo "EMAIL_PASS: ${EMAIL_PASS:+SET}"
+        echo "EMAIL_FROM: ${EMAIL_FROM:+SET}"
+        echo "EMAIL_HOST: ${EMAIL_HOST:+SET}"
+        echo "EMAIL_PORT: ${EMAIL_PORT:+SET}"
+        echo "GOOGLE_SERVICE_ACCOUNT_KEY: ${GOOGLE_SERVICE_ACCOUNT_KEY:+SET}"
+
+        # Google Sheetsからマルチユーザー実行（並列バッチ処理）
+        echo "🔄 バッチ${{ matrix.batch }}/4 開始"
+        uv run python read_spreadsheet_and_execute.py \
+          --spreadsheet-id "$SPREADSHEET_ID" \
+          --analysis "$ANALYSIS" \
+          --delivery "$DELIVERY" \
+          --days "$DAYS" \
+          --batch-id ${{ matrix.batch }} \
+          --total-batches 4
