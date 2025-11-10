@@ -24,13 +24,11 @@ class GoogleAPIService:
     def __init__(self, service_account_key: str = None):
         """
         Args:
-            service_account_key: サービスアカウントキーのJSONファイルパスまたはJSON文字列
-                               環境変数GOOGLE_SERVICE_ACCOUNT_KEYを優先して使用（GitHub Actions対応）
+            service_account_key: サービスアカウントキーのJSON文字列
+                               環境変数GOOGLE_SERVICE_ACCOUNT_KEYから自動的に読み込まれます
         """
-        # JSON直接記載方式を優先（GitHub Actions対応）
+        # JSON文字列形式で認証情報を取得
         self._service_account_json = service_account_key or os.getenv("GOOGLE_SERVICE_ACCOUNT_KEY")
-        # ファイルパス方式は廃止予定（レガシー対応のみ）
-        self._service_account_key = None
         
         # デバッグ: 認証情報の状態を確認
         if self._service_account_json:
@@ -53,21 +51,21 @@ class GoogleAPIService:
         self._check_api_connection()
     
     def _build_credentials(self):
-        """Google API認証を構築（JSON方式優先、GitHub Actions対応）"""
+        """Google API認証を構築（JSON文字列形式）"""
         import json
         try:
             if self._service_account_json:
-                # Service Account JSON文字列から認証（優先方式）
+                # Service Account JSON文字列から認証
                 service_account_info = json.loads(self._service_account_json)
                 credentials = service_account.Credentials.from_service_account_info(
                     service_account_info,
                     scopes=self.SCOPES
                 )
-                logger.info("Service Account認証成功（JSON）", "google", 
-                           scopes_count=len(self.SCOPES), 
+                logger.info("Service Account認証成功", "google",
+                           scopes_count=len(self.SCOPES),
                            project_id=service_account_info.get('project_id'))
             else:
-                # フォールバック: デフォルト認証を試行
+                # デフォルト認証を試行
                 credentials, _ = default(scopes=self.SCOPES)
                 logger.info("デフォルト認証成功", "google", scopes_count=len(self.SCOPES))
             

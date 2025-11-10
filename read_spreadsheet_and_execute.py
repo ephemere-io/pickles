@@ -20,8 +20,8 @@ class GoogleSheetsReader:
     
     def __init__(self, service_account_key_file: str = None):
         """
-        service_account_key_file: サービスアカウントキーのJSONファイルパス
-        環境変数GOOGLE_APPLICATION_CREDENTIALSが設定されている場合はそちらを優先
+        service_account_key_file: サービスアカウントキーのJSON文字列
+        環境変数GOOGLE_SERVICE_ACCOUNT_KEYから自動的に読み込まれます
         """
         # 統一されたGoogle APIサービスを使用
         try:
