@@ -86,11 +86,11 @@ class PicklesSystem:
                 # コンテキスト分析用にdays日分のデータを取得
                 logger.start(f"{data_source}からの{days}日間データ取得（コンテキスト用）", "data", days=days)
                 context_data = self._fetch_data(data_source, days)
-                
+
                 if not context_data:
-                    logger.warning("コンテキストデータが見つかりません", "data", source=data_source, days=days)
-                    return {"error": "データが見つかりませんでした"}
-                
+                    logger.warning("コンテキストデータが見つかりません（空データとして処理を継続）", "data", source=data_source, days=days)
+                    context_data = []
+
                 logger.success("コンテキストデータ取得完了", "data", count=len(context_data), source=data_source)
                 
                 # 直近7日分のデータも取得
@@ -107,11 +107,11 @@ class PicklesSystem:
                 # days == 7の場合は通常の処理
                 logger.start(f"{data_source}からのデータ取得", "data", days=days)
                 raw_data = self._fetch_data(data_source, days)
-                
+
                 if not raw_data:
-                    logger.warning("データが見つかりません", "data", source=data_source, days=days)
-                    return {"error": "データが見つかりませんでした"}
-                
+                    logger.warning("データが見つかりません（空データとして処理を継続）", "data", source=data_source, days=days)
+                    raw_data = []
+
                 logger.success("データ取得完了", "data", count=len(raw_data), source=data_source)
                 week_data = raw_data
             

@@ -237,11 +237,11 @@ class DocumentAnalyzer:
                         analysis_type=analysis_type)
             raise AnalysisError(f"AI分析エラー: {e}")
     
-    def _generate_context_insights(self, week_data: List[Dict[str, str]], context_data: List[Dict[str, str]], 
+    def _generate_context_insights(self, week_data: List[Dict[str, str]], context_data: List[Dict[str, str]],
                                   analysis_type: str, language: str = "日本語") -> str:
         """コンテキスト付きAI分析を実行してインサイトを生成"""
-        if not week_data or not context_data:
-            return "分析対象のデータがありません。"
+        if not week_data and not context_data:
+            return "分析対象のデータがありません。指定期間にジャーナルエントリが見つかりませんでした。"
         
         # データをフォーマット
         formatted_week_data = self._format_data_for_analysis(week_data)
