@@ -32,25 +32,48 @@ uv sync
 
 ### 3. 環境変数の設定
 
-`.env`ファイルを作成し、以下の値を設定してください：
+`example.env`をコピーして`.env`ファイルを作成し、以下の値を設定してください：
 
 ```bash
-# Notion API設定（Notionを使用する場合）
+# example.envをコピー
+cp example.env .env
+
+# エディタで.envを開いて値を設定
+```
+
+#### 必須の環境変数
+
+```bash
+# Notion API設定（Notionを使用する場合は必須）
 NOTION_API_KEY=your_notion_api_key_here
 
-# Google Docs API設定（Google Docsを使用する場合）
-GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account-key.json
-
-# OpenAI API設定
+# OpenAI API設定（必須）
 OPENAI_API_KEY=your_openai_api_key_here
 
-# メール設定
-EMAIL_USER=your_smtp_username_here        # SMTP認証用ユーザー名（IAMユーザーIDなど）
-EMAIL_PASS=your_email_password_here       # SMTP認証用パスワード
-EMAIL_FROM=pickles@ephemere.io           # メール送信者として表示されるアドレス
+# Google API設定（Google SheetsやGoogle Docsを使用する場合は必須）
+# JSON全体を1行で記述してください
+GOOGLE_SERVICE_ACCOUNT_KEY={"type":"service_account","project_id":"..."}
+
+# メール設定（レポート送信に必須）
+EMAIL_USER=your_email@gmail.com          # SMTP認証用ユーザー名
+EMAIL_PASS=your_app_password_here        # SMTP認証用パスワード（Gmailの場合はアプリパスワード）
 EMAIL_TO=recipient@example.com           # 送信先メールアドレス
+EMAIL_FROM=sender@example.com            # メール送信者として表示されるアドレス
 EMAIL_HOST=smtp.gmail.com                # SMTPサーバーホスト
 EMAIL_PORT=587                           # SMTPポート番号
+```
+
+#### オプションの環境変数
+
+```bash
+# Google Docs入力（Notionの代わりにGoogle Docsを使用する場合）
+GOOGLE_DOCS_URL=https://docs.google.com/document/d/your_document_id/edit
+
+# テストモード（開発・テスト時のみ）
+PICKLES_TEST_MODE=1                      # 1を設定するとモックデータを使用
+
+# テスト用モックファイル指定
+PICKLES_TEST_SPECIFIC_MOCK_FILE=mock_data_1.json
 ```
 
 ## 📋 コマンドライン引数リファレンス
@@ -246,13 +269,21 @@ uv run python main.py --help
 </details>
 
 <details>
-<summary>📄 Google Docs API設定</summary>
+<summary>📄 Google API設定（Google SheetsとGoogle Docs）</summary>
 
 1. [Google Cloud Console](https://console.cloud.google.com/)で新しいプロジェクトを作成
-2. Google Docs APIを有効化
+2. 必要なAPIを有効化:
+   - Google Sheets API（マルチユーザー実行時に必要）
+   - Google Docs API（Google Docs入力を使用する場合に必要）
 3. Service Accountを作成し、JSONキーをダウンロード
-4. Service AccountのメールアドレスをGoogle Docsの**閲覧者として共有**
-5. JSONキーのパスを`GOOGLE_APPLICATION_CREDENTIALS`に設定
+4. Service AccountのメールアドレスをGoogle SheetsやGoogle Docsの**閲覧者として共有**
+5. JSONキーの内容全体を`GOOGLE_SERVICE_ACCOUNT_KEY`環境変数に設定（1行のJSON文字列として）
+
+**設定例:**
+```bash
+# JSONキー全体を1行で設定
+GOOGLE_SERVICE_ACCOUNT_KEY={"type":"service_account","project_id":"your-project","private_key_id":"...","private_key":"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n","client_email":"...@....iam.gserviceaccount.com",...}
+```
 
 **Google Docs構造要件:**
 ```
@@ -265,6 +296,22 @@ uv run python main.py --help
 ```
 - 日付ヘッダーは`# YYYY-MM-DD`形式で記述
 - 各ヘッダー以下が該当日の日誌エントリになる
+
+**Google Docs使用時の権限設定:**
+
+Google Docsをデータソースとして使用する場合、使用する環境に応じて以下のService Accountメールアドレスを**閲覧者**として共有してください:
+
+| 環境 | Service Accountメールアドレス |
+|------|------------------------------|
+| Prototype（テスト・開発） | `pickles-sheets-reader@pickles-467502.iam.gserviceaccount.com` |
+| Production（本番運用） | `pickles-sheets-reader@pickles-reports.iam.gserviceaccount.com` |
+
+**共有手順:**
+1. Google Docsを開く
+2. 右上の「共有」ボタンをクリック
+3. 上記の該当するService Accountメールアドレスを入力
+4. 権限を「閲覧者」に設定
+5. 「送信」をクリック
 
 </details>
 
@@ -325,7 +372,8 @@ pickles/
 ├── utils/
 │   ├── __init__.py           # ユーティリティ（定数管理含む）
 │   ├── logger.py             # ログ出力（テキストレベル表示）
-│   └── printer.py            # ヘルプ表示・定数定義
+│   ├── printer.py            # ヘルプ表示・定数定義
+│   └── google_service.py     # Google API認証・サービス初期化
 ├── tests/                    # テストスイート
 │   ├── README.md             # テストドキュメント
 │   ├── __init__.py
@@ -344,7 +392,8 @@ pickles/
 ├── .github/workflows/
 │   ├── weekly-report.yml     # GitHub Actions マルチユーザー実行
 │   └── setup-secrets.md      # GitHub Actions設定ガイド
-├── .env                      # 環境変数（要作成）
+├── example.env               # 環境変数のテンプレート
+├── .env                      # 環境変数（要作成、Gitにコミットしない）
 ├── pyproject.toml            # プロジェクト設定
 ├── pytest.ini                # pytest設定
 ├── capture_mock.py           # モックデータ生成スクリプト
@@ -411,11 +460,28 @@ uv run pytest tests/smoke/ -m smoke
 ```
 .env
 service_account_key.json
-*.json # Google Service Accountキーファイル
+**/service-account-*.json
 ```
+
+### 環境変数のセキュリティ
+- `.env`ファイルには本番用のAPIキーやパスワードを保存
+- `example.env`はテンプレートとして公開可能（実際の値を含まない）
+- `GOOGLE_SERVICE_ACCOUNT_KEY`にはJSON全体を1行で設定
 
 ### GitHub Actions セキュリティ
 - 全てのAPIキーはGitHub Secretsで管理
 - Google Service Accountは最小権限（Sheets読み取り、Docs読み取りのみ）
 - 実行環境は`test`環境を使用
+
+### 必要なGitHub Secrets
+GitHub Actionsを使用する場合、以下のSecretsを設定してください：
+- `OPENAI_API_KEY`: OpenAI APIキー
+- `GOOGLE_SERVICE_ACCOUNT_KEY`: Google Service AccountのJSON鍵（全体）
+- `EMAIL_USER`: メール送信用ユーザー名
+- `EMAIL_PASS`: メール送信用パスワード
+- `EMAIL_FROM`: 送信者アドレス
+- `EMAIL_HOST`: SMTPホスト
+- `EMAIL_PORT`: SMTPポート
+- `SPREADSHEET_ID_USERS_LIST`: ユーザーリストのGoogle Sheets ID（マルチユーザー実行用）
+- `SPREADSHEET_ID_ADMIN_LIST`: 管理者リストのGoogle Sheets ID（管理者実行用）
 
