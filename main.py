@@ -17,7 +17,7 @@ load_dotenv()
 from inputs import NotionInput, NotionInputError, GdocsInput, GdocsInputError
 from throughput import DocumentAnalyzer, AnalysisError
 from outputs import ReportDelivery, OutputError
-from utils import logger, UsagePrinter, CommandArgs, DataSources, AnalysisTypes, DeliveryMethods
+from utils import logger, UsagePrinter, CommandArgs, DataSources, AnalysisTypes, DeliveryMethods, LLMModels
 
 
 class PicklesSystem:
@@ -37,10 +37,12 @@ class PicklesSystem:
         language = user_config.get('language') if user_config else None
 
 
+        llm_model = user_config.get('llm_model') if user_config else None
+
         self._notion_api_key = notion_api_key
         self._notion_input = None  # NotionとGoogle Docs両対応のため、実際に使用時まで初期化を遅延
         self._gdocs_url = gdocs_url
-        self._analyzer = DocumentAnalyzer(user_name=user_name, language=language)
+        self._analyzer = DocumentAnalyzer(user_name=user_name, language=language, llm_model=llm_model)
         self._delivery = ReportDelivery(email_config=email_config)
         # グローバルloggerインスタンスを使用
         
@@ -239,6 +241,7 @@ class PicklesSystem:
             "notion_api_key": None,
             "gdocs_url": None,
             "language": None,
+            "llm_model": LLMModels.CHATGPT,
         }
         
         parsed_args = default_args.copy()
@@ -304,6 +307,15 @@ class PicklesSystem:
             elif arg == CommandArgs.LANGUAGE and i + 1 < len(args):
                 parsed_args["language"] = args[i + 1]
                 i += 1
+            elif arg == CommandArgs.LLM_MODEL and i + 1 < len(args):
+                llm_model_value = args[i + 1]
+                valid_llm_models = [LLMModels.CHATGPT, LLMModels.CLAUDE, LLMModels.GEMINI]
+                if llm_model_value not in valid_llm_models:
+                    logger.error("無効なLLMモデル", "system", value=llm_model_value,
+                               valid_values=valid_llm_models)
+                    sys.exit(1)
+                parsed_args["llm_model"] = llm_model_value
+                i += 1
             
             i += 1
         
@@ -322,7 +334,8 @@ def parse_command_args(args: List[str]) -> Dict[str, any]:
         "email_to": None,
         "notion_api_key": None,
         "gdocs_url": None,
-        "language": None
+        "language": None,
+        "llm_model": LLMModels.CHATGPT
     }
     
     parsed_args = default_args.copy()
@@ -383,6 +396,15 @@ def parse_command_args(args: List[str]) -> Dict[str, any]:
         elif arg == CommandArgs.LANGUAGE and i + 1 < len(args):
             parsed_args["language"] = args[i + 1]
             i += 1
+        elif arg == CommandArgs.LLM_MODEL and i + 1 < len(args):
+            llm_model_value = args[i + 1]
+            valid_llm_models = [LLMModels.CHATGPT, LLMModels.CLAUDE, LLMModels.GEMINI]
+            if llm_model_value not in valid_llm_models:
+                logger.error("無効なLLMモデル", "system", value=llm_model_value,
+                           valid_values=valid_llm_models)
+                sys.exit(1)
+            parsed_args["llm_model"] = llm_model_value
+            i += 1
         
         i += 1
     
@@ -401,15 +423,14 @@ def main() -> None:
         sys.exit(0)
     
     # ユーザー設定の構築（コマンドライン引数を優先し、.envをフォールバック）
-    user_config = None
-    if args.get("user_name") or args.get("email_to") or args.get("notion_api_key") or args.get("gdocs_url") or args.get("language"):
-        user_config = {
-            'user_name': args.get("user_name"),
-            'email_to': args.get("email_to"),
-            'notion_api_key': args.get("notion_api_key"),
-            'gdocs_url': args.get("gdocs_url") or os.getenv("GOOGLE_DOCS_URL"),
-            'language': args.get("language")
-        }
+    user_config = {
+        'user_name': args.get("user_name"),
+        'email_to': args.get("email_to"),
+        'notion_api_key': args.get("notion_api_key"),
+        'gdocs_url': args.get("gdocs_url") or os.getenv("GOOGLE_DOCS_URL"),
+        'language': args.get("language"),
+        'llm_model': args.get("llm_model")
+    }
 
 
     # システムを初期化
@@ -424,7 +445,8 @@ def main() -> None:
                delivery=delivery_str, 
                source=args["source"],
                days=args["days"],
-               language=args['language'])
+               language=args['language'],
+               llm_model=args['llm_model'])
     
     # 分析実行
     results = system.run_analysis(

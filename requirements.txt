@@ -1,5 +1,7 @@
 notion-client>=0.6.0
 openai>=0.27.0
+anthropic>=0.18.0
+google-generativeai>=0.4.0
 python-dotenv>=1.0.0
 google-auth>=2.0.0
 google-auth-oauthlib>=1.0.0

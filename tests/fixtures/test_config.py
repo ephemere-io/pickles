@@ -22,8 +22,11 @@ def run_main_command(args: List[str], timeout: int = 30, use_mocks: bool = True)
     Returns:
         subprocess.CompletedProcess: 実行結果
     """
-    # Use virtual environment Python directly if uv is not available
-    venv_python = "/Users/yuki.agatsuma@sa-nu.com/Desktop/pickles/.venv/bin/python"
+    # プロジェクトルートディレクトリを取得
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    
+    # Use virtual environment Python if available, otherwise use python3
+    venv_python = os.path.join(project_root, ".venv", "bin", "python")
     if os.path.exists(venv_python):
         cmd = [venv_python, "main.py"] + args
     else:
@@ -42,7 +45,7 @@ def run_main_command(args: List[str], timeout: int = 30, use_mocks: bool = True)
         text=True,
         timeout=timeout,
         env=env,
-        cwd="/Users/yuki.agatsuma@sa-nu.com/Desktop/pickles"
+        cwd=project_root
     )
 
 

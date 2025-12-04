@@ -1,14 +1,21 @@
 import os
-from typing import List, Dict
+from typing import List, Dict, Optional
 from openai import OpenAI
 from dotenv import load_dotenv
 
 # 定数をインポート
-from utils import AnalysisTypes, logger
+from utils import AnalysisTypes, LLMModels, logger
 # プロンプト管理クラスをインポート
 from .prompts import DomiPrompts, AgaPrompts
 
 load_dotenv()
+
+# LLMモデルごとの具体的なモデル名マッピング
+LLM_MODEL_NAMES = {
+    LLMModels.CHATGPT: "gpt-4o",
+    LLMModels.CLAUDE: "claude-sonnet-4-20250514",
+    LLMModels.GEMINI: "gemini-2.0-flash",
+}
 
 
 class AnalysisError(Exception):
@@ -19,16 +26,34 @@ class AnalysisError(Exception):
 class DocumentAnalyzer:
     """ドキュメント分析クラス"""
     
-    def __init__(self, user_name: str = None, language: str = None):
+    def __init__(self, user_name: str = None, language: str = None, llm_model: str = None):
+        self._llm_model = llm_model or LLMModels.CHATGPT
+        self._user_name = user_name
+        self._language = language
+        
+        # LLMモデルに応じてクライアントを初期化
+        self._client = self._initialize_llm_client()
+    
+    def _initialize_llm_client(self):
+        """LLMモデルに応じたクライアントを初期化"""
         # テストモードの場合はモックを使用
         if os.getenv('PICKLES_TEST_MODE') == '1':
             from tests.fixtures.mock_handlers import mock_openai_api
-            self._client = mock_openai_api()(api_key=os.getenv("OPENAI_API_KEY"))
-        else:
-            self._client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            return mock_openai_api()(api_key=os.getenv("OPENAI_API_KEY"))
         
-        self._user_name = user_name
-        self._language = language
+        if self._llm_model == LLMModels.CHATGPT:
+            return OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        elif self._llm_model == LLMModels.CLAUDE:
+            import anthropic
+            return anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        elif self._llm_model == LLMModels.GEMINI:
+            import google.generativeai as genai
+            genai.configure(api_key=os.getenv("GOOGLE_GEMINI_API_KEY"))
+            return genai
+        else:
+            # フォールバック: ChatGPT
+            logger.warning(f"未知のLLMモデル: {self._llm_model}、ChatGPTにフォールバック", "ai")
+            return OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     
     def analyze_documents(self, 
                          raw_data: List[Dict[str, str]], 
@@ -186,6 +211,71 @@ class DocumentAnalyzer:
         logger.error(error_msg, "ai", available_types=available_types)
         raise RuntimeError(f"{error_msg}。利用可能なタイプ: {available_types}")
 
+    def _call_llm_api(self, prompt: str, data_length: int) -> str:
+        """LLMモデルに応じたAPI呼び出しを実行"""
+        model_name = LLM_MODEL_NAMES.get(self._llm_model, LLM_MODEL_NAMES[LLMModels.CHATGPT])
+        
+        logger.start("AI APIリクエスト送信", "ai", 
+                    llm_model=self._llm_model,
+                    model_name=model_name,
+                    data_length=data_length)
+        
+        if self._llm_model == LLMModels.CHATGPT:
+            return self._call_chatgpt_api(prompt, model_name)
+        elif self._llm_model == LLMModels.CLAUDE:
+            return self._call_claude_api(prompt, model_name)
+        elif self._llm_model == LLMModels.GEMINI:
+            return self._call_gemini_api(prompt, model_name)
+        else:
+            # フォールバック: ChatGPT
+            return self._call_chatgpt_api(prompt, model_name)
+    
+    def _call_chatgpt_api(self, prompt: str, model_name: str) -> str:
+        """ChatGPT APIを呼び出す"""
+        messages = [{"role": "user", "content": prompt}]
+        
+        resp = self._client.responses.create(
+            model=model_name,
+            reasoning={"effort": "high"},
+            input=messages,
+            max_output_tokens=50000
+        )
+        
+        logger.success("ChatGPT APIレスポンス受信", "ai")
+        data_dict = resp.to_dict()
+        logger.debug("レスポンス構造解析", "ai", response_keys=list(data_dict.keys()))
+        
+        return self._parse_api_response(data_dict)
+    
+    def _call_claude_api(self, prompt: str, model_name: str) -> str:
+        """Claude APIを呼び出す"""
+        message = self._client.messages.create(
+            model=model_name,
+            max_tokens=8192,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        
+        logger.success("Claude APIレスポンス受信", "ai")
+        
+        # Claude APIのレスポンス形式からテキストを抽出
+        if message.content and len(message.content) > 0:
+            return message.content[0].text
+        
+        raise RuntimeError("Claude APIレスポンスにコンテンツが含まれていません")
+    
+    def _call_gemini_api(self, prompt: str, model_name: str) -> str:
+        """Gemini APIを呼び出す"""
+        model = self._client.GenerativeModel(model_name)
+        response = model.generate_content(prompt)
+        
+        logger.success("Gemini APIレスポンス受信", "ai")
+        
+        # Gemini APIのレスポンス形式からテキストを抽出
+        if response.text:
+            return response.text
+        
+        raise RuntimeError("Gemini APIレスポンスにテキストが含まれていません")
+
     def _generate_insights(self, data: List[Dict[str, str]], analysis_type: str, language: str = "日本語") -> str:
         """AI分析を実行してインサイトを生成"""
         if not data:
@@ -194,37 +284,17 @@ class DocumentAnalyzer:
         # データをフォーマット
         formatted_data = self._format_data_for_analysis(data)
         
-        logger.info("AI分析を実行", "ai", analysis_type=analysis_type, language=language)
+        logger.info("AI分析を実行", "ai", analysis_type=analysis_type, language=language, llm_model=self._llm_model)
         # プロンプト作成
         prompt = self._create_analysis_prompt(formatted_data, analysis_type, language)
-        # 単一メッセージとして送信
-        messages = [{"role": "user", "content": prompt}]
 
         logger.debug(f"言語設定 @ analyser.py, _generate_insights", "ai", language=language)
 
         # AI分析実行
         try:
-            logger.start("AI APIリクエスト送信", "ai", 
-                        data_length=len(formatted_data), 
-                        max_tokens=50000, 
-                        message_count=len(messages))
-            
-            resp = self._client.responses.create(
-                model="gpt-5-mini",
-                reasoning={"effort": "high"},
-                input=messages,
-                max_output_tokens=50000
-            )
-            
-            logger.success("AI APIレスポンス受信", "ai")
-            data_dict = resp.to_dict()
-            logger.debug("レスポンス構造解析", "ai", response_keys=list(data_dict.keys()))
-            
-            # 統一的なレスポンスパース処理を使用
-            insights = self._parse_api_response(data_dict)
+            insights = self._call_llm_api(prompt, len(formatted_data))
             
             logger.complete("AI分析処理", "ai", result_length=len(insights))
-            
             
             return insights
             
@@ -234,7 +304,8 @@ class DocumentAnalyzer:
                         error_type=type(e).__name__,
                         error_message=str(e),
                         data_length=len(formatted_data),
-                        analysis_type=analysis_type)
+                        analysis_type=analysis_type,
+                        llm_model=self._llm_model)
             raise AnalysisError(f"AI分析エラー: {e}")
     
     def _generate_context_insights(self, week_data: List[Dict[str, str]], context_data: List[Dict[str, str]],
@@ -247,38 +318,18 @@ class DocumentAnalyzer:
         formatted_week_data = self._format_data_for_analysis(week_data)
         formatted_context_data = self._format_data_for_analysis(context_data)
         
-        logger.info("コンテキスト付きAI分析を実行", "ai", analysis_type=analysis_type, language=language)
+        logger.info("コンテキスト付きAI分析を実行", "ai", analysis_type=analysis_type, language=language, llm_model=self._llm_model)
         # プロンプト作成
         prompt = self._create_context_analysis_prompt(formatted_week_data, formatted_context_data, analysis_type, language)
-        # 単一メッセージとして送信
-        messages = [{"role": "user", "content": prompt}]
 
         logger.debug(f"言語設定 @ analyser.py, _generate_context_insights", "ai", language=language)
 
         # AI分析実行
         try:
-            logger.start("AI APIリクエスト送信（コンテキスト付き）", "ai", 
-                        week_data_length=len(formatted_week_data),
-                        context_data_length=len(formatted_context_data), 
-                        max_tokens=50000, 
-                        message_count=len(messages))
-            
-            resp = self._client.responses.create(
-                model="gpt-5-mini",
-                reasoning={"effort": "high"},
-                input=messages,
-                max_output_tokens=50000
-            )
-            
-            logger.success("AI APIレスポンス受信（コンテキスト付き）", "ai")
-            data_dict = resp.to_dict()
-            logger.debug("レスポンス構造解析", "ai", response_keys=list(data_dict.keys()))
-            
-            # 統一的なレスポンスパース処理を使用
-            insights = self._parse_api_response(data_dict)
+            total_data_length = len(formatted_week_data) + len(formatted_context_data)
+            insights = self._call_llm_api(prompt, total_data_length)
             
             logger.complete("AI分析処理（コンテキスト付き）", "ai", result_length=len(insights))
-            
             
             return insights
             
@@ -289,7 +340,8 @@ class DocumentAnalyzer:
                         error_message=str(e),
                         week_data_length=len(formatted_week_data),
                         context_data_length=len(formatted_context_data),
-                        analysis_type=analysis_type)
+                        analysis_type=analysis_type,
+                        llm_model=self._llm_model)
             raise AnalysisError(f"AI分析エラー: {e}")
     
     def _format_data_for_analysis(self, data: List[Dict[str, str]]) -> str:

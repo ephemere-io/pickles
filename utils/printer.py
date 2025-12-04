@@ -11,7 +11,8 @@ CommandArgs = SimpleNamespace(
     EMAIL_TO="--email-to",
     NOTION_API_KEY="--notion-api-key",
     GDOCS_URL="--gdocs-url",
-    LANGUAGE="--language"
+    LANGUAGE="--language",
+    LLM_MODEL="--llm-model"
 )
 
 DataSources = SimpleNamespace(
@@ -30,6 +31,12 @@ DeliveryMethods = SimpleNamespace(
     EMAIL_HTML="email_html",
     FILE_TEXT="file_text",
     FILE_HTML="file_html"
+)
+
+LLMModels = SimpleNamespace(
+    CHATGPT="chatgpt",
+    CLAUDE="claude",
+    GEMINI="gemini"
 )
 
 
@@ -67,6 +74,11 @@ class UsagePrinter:
   {CommandArgs.LANGUAGE} <lang>      出力言語 (デフォルト: english)
                                     • japanese
                                     • english
+  
+  {CommandArgs.LLM_MODEL} <model>   LLMモデル (デフォルト: {LLMModels.CHATGPT})
+                                    • {LLMModels.CHATGPT}
+                                    • {LLMModels.CLAUDE}
+                                    • {LLMModels.GEMINI}
   
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🎯 指定実行設定
