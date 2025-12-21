@@ -66,6 +66,8 @@ jobs:
         EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
         EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
         GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
       run: |
         # 環境変数から設定を取得（手動実行のみ）
         # スプレッドシート構造: EMAIL_TO | NOTION_API_KEY | GOOGLE_DOCS_URL | USER_NAME | LANGUAGE
@@ -96,6 +98,8 @@ jobs:
         echo "EMAIL_HOST: ${EMAIL_HOST:+SET}"
         echo "EMAIL_PORT: ${EMAIL_PORT:+SET}"
         echo "GOOGLE_SERVICE_ACCOUNT_KEY: ${GOOGLE_SERVICE_ACCOUNT_KEY:+SET}"
+        echo "SUPABASE_URL: ${SUPABASE_URL:+SET}"
+        echo "SUPABASE_KEY: ${SUPABASE_KEY:+SET}"
         
         # Google Sheetsからマルチユーザー実行（並列バッチ処理）
         echo "🔄 バッチ${{ matrix.batch }}/4 開始"
