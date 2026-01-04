@@ -11,7 +11,7 @@ import sys
 import subprocess
 from typing import List, Dict
 from utils.logger import logger
-from utils.google_service import GoogleServiceFactory
+from utils.google_service import get_google_service
 from models.user import User, mask_name
 
 
@@ -19,7 +19,7 @@ class GoogleSheetsReader:
     """Google Sheetsからユーザーデータを読み込む"""
 
     def __init__(self):
-        self.sheets_service = GoogleServiceFactory.get_sheets_service()
+        self.sheets_service = get_google_service().get_sheets_service()
 
     def read_user_data(self, spreadsheet_id: str, range_name: str = "A1:E") -> List[Dict]:
         """Google Sheetsからユーザーデータを読み込む"""
