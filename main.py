@@ -151,9 +151,10 @@ class PicklesSystem:
             logger.complete(f"{analysis_type}分析処理", "ai", analyzed_count=analysis_result['data_count'])
 
             # 分析完了をSupabaseに記録
+            # insightsにレポート本文、statisticsに統計情報が格納されている
             analysis_run.mark_completed(
-                content=analysis_result.get('final_report', ''),
-                stats_summary=f"分析対象: {analysis_result['data_count']}件"
+                content=analysis_result.get('insights', ''),
+                stats_summary=analysis_result.get('statistics', f"分析対象: {analysis_result['data_count']}件")
             )
 
             # レポート配信
