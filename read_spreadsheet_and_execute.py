@@ -90,13 +90,16 @@ def execute_pickles_for_user(user: User, analysis_type: str,
         "--language", user_data['language']
     ]
 
-    # データソース追加
+    # データソース追加（優先順位: Notion > Google Docs）
     if user.notion_api_key:
         cmd.extend(["--source", "notion",
                    "--notion-api-key", user.notion_api_key])
     elif user.google_docs_url:
         cmd.extend(["--source", "gdocs",
                    "--gdocs-url", user.google_docs_url])
+    else:
+        logger.error(f"❌ {mask_name(user.user_name)} データソースなし", "execution")
+        return False
 
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
@@ -110,10 +113,38 @@ def execute_pickles_for_user(user: User, analysis_type: str,
             logger.error(f"❌ {mask_name(user.user_name)} 失敗", "execution")
             return False
 
+    except subprocess.TimeoutExpired:
+        logger.error(f"❌ {mask_name(user.user_name)} タイムアウト", "execution",
+                    timeout=600)
+        return False
+
     except Exception as e:
         logger.error(f"❌ {mask_name(user.user_name)} エラー", "execution",
                     error_type=type(e).__name__)
         return False
+
+
+def filter_users_for_batch(users: List[User], batch_id: int, total_batches: int) -> List[User]:
+    """バッチ用にユーザーリストをフィルタリング（動的分割）"""
+    import math
+
+    total_users = len(users)
+    users_per_batch = math.ceil(total_users / total_batches)
+
+    start_index = (batch_id - 1) * users_per_batch
+    end_index = min(batch_id * users_per_batch, total_users)
+
+    batch_users = users[start_index:end_index]
+
+    logger.info("バッチ分割詳細", "execution",
+               total_users=total_users,
+               batch_id=batch_id,
+               total_batches=total_batches,
+               start_index=start_index,
+               end_index=end_index,
+               batch_size=len(batch_users))
+
+    return batch_users
 
 
 def main():
@@ -131,6 +162,10 @@ def main():
                        help="配信方法（カンマ区切りで複数指定可）")
     parser.add_argument("--days", type=int, default=7,
                        help="取得日数")
+    parser.add_argument("--batch-id", type=int,
+                       help="バッチID（並列実行用）")
+    parser.add_argument("--total-batches", type=int,
+                       help="総バッチ数（並列実行用）")
 
     args = parser.parse_args()
 
@@ -150,6 +185,12 @@ def main():
         if not users:
             logger.error("実行可能なユーザーが見つかりません", "execution")
             sys.exit(1)
+
+        # バッチフィルタリング（並列実行用）
+        if args.batch_id is not None and args.total_batches is not None:
+            users = filter_users_for_batch(users, args.batch_id, args.total_batches)
+            logger.info(f"バッチ{args.batch_id}/{args.total_batches}で処理", "execution",
+                       batch_users=len(users))
 
         # 3. 各ユーザーに対して実行
         success_count = 0
