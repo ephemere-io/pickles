@@ -164,8 +164,8 @@ class PicklesSystem:
             for method in delivery_methods:
                 # 配信方法がemail系の場合はemail_toを設定
                 email_to = None
-                if 'email' in method and self._delivery._email_config:
-                    email_to = self._delivery._email_config.get('email_to')
+                if 'email' in method and self._delivery.to_email:
+                    email_to = self._delivery.to_email
 
                 delivery = Delivery.create(
                     analysis_run_id=analysis_run.id,
