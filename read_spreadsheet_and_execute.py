@@ -10,55 +10,109 @@ import argparse
 import sys
 import subprocess
 from typing import List, Dict
+from googleapiclient.errors import HttpError
 from utils.logger import logger
-from utils.google_service import get_google_service
-from models.user import User, mask_name
+from utils.google_service import get_google_service, GoogleAPIError
+from models.user import User, mask_name, mask_email
 
 
 class GoogleSheetsReader:
     """Google Sheetsからユーザーデータを読み込む"""
 
-    def __init__(self):
-        self.sheets_service = get_google_service().get_sheets_service()
+    def __init__(self, service_account_key_file: str = None):
+        """
+        service_account_key_file: サービスアカウントキーのJSON文字列
+        環境変数GOOGLE_SERVICE_ACCOUNT_KEYから自動的に読み込まれます
+        """
+        try:
+            self._google_service = get_google_service(service_account_key_file)
+            self.sheets_service = self._google_service.get_sheets_service()
+            logger.info("Google Sheets統合サービス初期化完了", "sheets")
+        except GoogleAPIError as e:
+            logger.error("Google Sheets統合サービス初期化失敗", "sheets", error=str(e))
+            raise ValueError(f"Google Sheets初期化エラー: {e}")
 
     def read_user_data(self, spreadsheet_id: str, range_name: str = "A1:E") -> List[Dict]:
-        """Google Sheetsからユーザーデータを読み込む"""
-        result = self.sheets_service.spreadsheets().values().get(
-            spreadsheetId=spreadsheet_id,
-            range=range_name
-        ).execute()
+        """Google Sheetsからユーザーデータを読み込む
 
-        rows = result.get('values', [])
+        想定するスプレッドシート構造:
+        A列: EMAIL_TO
+        B列: NOTION_API_KEY
+        C列: GOOGLE_DOCS_URL
+        D列: user name
+        E列: LANGUAGE
+        """
+        try:
+            # アクセステストを実行
+            if not self._google_service.test_sheets_access(spreadsheet_id):
+                raise ValueError(f"Google Sheetsへのアクセスが拒否されました: {spreadsheet_id}")
 
-        if not rows or len(rows) < 2:
-            logger.warning("ユーザーデータが見つかりません", "sheets")
+            result = self.sheets_service.spreadsheets().values().get(
+                spreadsheetId=spreadsheet_id,
+                range=range_name
+            ).execute()
+
+            rows = result.get('values', [])
+
+            if not rows or len(rows) < 2:
+                logger.warning("ユーザーデータが見つかりません", "sheets")
+                return []
+
+            # ヘッダー行をスキップ
+            user_data_list = []
+            for i, row in enumerate(rows[1:], start=2):
+                if not row or len(row) == 0:
+                    continue
+
+                # 列が不足している場合は空文字で埋める
+                while len(row) < 5:
+                    row.append('')
+
+                user_data = {
+                    'email_to': row[0].strip(),
+                    'notion_api_key': row[1].strip() if row[1] else None,
+                    'google_docs_url': row[2].strip() if row[2] else None,
+                    'user_name': row[3].strip() if row[3] else f'User {i-1}',
+                    'language': row[4].strip() if row[4] else 'japanese'
+                }
+
+                # 必須フィールドのバリデーション（email + データソース）
+                if user_data['email_to'] and (user_data['notion_api_key'] or user_data['google_docs_url']):
+                    # データソース情報の構築（マスク済み）
+                    source_info = []
+                    if user_data['notion_api_key']:
+                        api_key = user_data['notion_api_key']
+                        if len(api_key) > 10:
+                            source_info.append(f"Notion: {api_key[:4]}...{api_key[-4:]}")
+                        else:
+                            source_info.append(f"Notion: 短いキー({len(api_key)}文字)")
+                    if user_data['google_docs_url']:
+                        source_info.append("GDocs: あり")
+
+                    user_data_list.append(user_data)
+                    logger.info("ユーザーデータ追加", "sheets",
+                               user=mask_name(user_data['user_name']),
+                               email=mask_email(user_data['email_to']),
+                               sources=", ".join(source_info))
+                elif user_data['email_to']:
+                    logger.warning(f"行{i}: データソースが不足", "sheets",
+                                  row=i, missing="NOTION_API_KEY または GOOGLE_DOCS_URL")
+                else:
+                    logger.warning(f"行{i}: 必須フィールドが不足", "sheets", row=i)
+
+            logger.success("スプレッドシートデータ読み込み完了", "sheets",
+                          user_count=len(user_data_list))
+            return user_data_list
+
+        except GoogleAPIError as error:
+            logger.error("Google API統合エラー", "sheets", error=str(error))
             return []
-
-        # ヘッダー行をスキップ
-        data_rows = rows[1:]
-
-        user_data_list = []
-        for row in data_rows:
-            if not row or len(row) == 0:
-                continue
-
-            # 列が不足している場合は空文字で埋める
-            while len(row) < 5:
-                row.append('')
-
-            user_data = {
-                'email_to': row[0].strip(),
-                'notion_api_key': row[1].strip() if row[1] else None,
-                'google_docs_url': row[2].strip() if row[2] else None,
-                'user_name': row[3].strip(),
-                'language': row[4].strip() if row[4] else 'japanese'
-            }
-
-            # メールアドレスが必須
-            if user_data['email_to']:
-                user_data_list.append(user_data)
-
-        return user_data_list
+        except HttpError as error:
+            logger.error("Google Sheets APIエラー", "sheets", error=str(error))
+            return []
+        except Exception as error:
+            logger.error("スプレッドシート読み込みエラー", "sheets", error=str(error))
+            return []
 
 
 def execute_pickles_for_user(user: User, analysis_type: str,
@@ -74,10 +128,19 @@ def execute_pickles_for_user(user: User, analysis_type: str,
     Returns:
         成功したかどうか
     """
-
-    logger.info(f"🎯 {mask_name(user.user_name)} の分析開始", "execution")
-
+    masked_name = mask_name(user.user_name)
     user_data = user.to_dict()
+
+    # データソースの決定（優先順位: Notion > Google Docs）
+    if user.notion_api_key:
+        data_source = "Notion"
+    elif user.google_docs_url:
+        data_source = "Google Docs"
+    else:
+        logger.error(f"❌ {masked_name} データソースなし", "execution")
+        return False
+
+    logger.info(f"{masked_name}: {data_source}を使用", "execution")
 
     cmd = [
         sys.executable, "main.py",
@@ -90,16 +153,19 @@ def execute_pickles_for_user(user: User, analysis_type: str,
         "--language", user_data['language']
     ]
 
-    # データソース追加（優先順位: Notion > Google Docs）
+    # データソース追加
     if user.notion_api_key:
         cmd.extend(["--source", "notion",
                    "--notion-api-key", user.notion_api_key])
     elif user.google_docs_url:
         cmd.extend(["--source", "gdocs",
                    "--gdocs-url", user.google_docs_url])
-    else:
-        logger.error(f"❌ {mask_name(user.user_name)} データソースなし", "execution")
-        return False
+
+    # デバッグ: 実行コマンドをログ出力（APIキーはマスク）
+    safe_cmd = [c if '--api-key' not in c and 'secret' not in c.lower() else '***' for c in cmd]
+    logger.debug("実行コマンド", "execution", cmd=" ".join(safe_cmd))
+
+    logger.start(f"{masked_name}のPickles実行 ({data_source})", "execution")
 
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
@@ -107,24 +173,25 @@ def execute_pickles_for_user(user: User, analysis_type: str,
         if result.returncode == 0:
             # 最終分析時刻を更新
             user.update_last_analysis_at()
-            logger.success(f"✅ {mask_name(user.user_name)} 完了", "execution")
+            logger.complete(f"{masked_name}のPickles実行 ({data_source})", "execution")
             return True
         else:
+            logger.failed(f"{masked_name}のPickles実行", "execution")
             # stderrの先頭200文字をログ出力（個人情報を含まない範囲）
             stderr_preview = result.stderr[:200] if result.stderr else ""
-            logger.error(f"❌ {mask_name(user.user_name)} 失敗", "execution",
+            logger.error("実行エラー詳細", "execution",
                         return_code=result.returncode,
                         stderr_preview=stderr_preview)
             return False
 
     except subprocess.TimeoutExpired:
-        logger.error(f"❌ {mask_name(user.user_name)} タイムアウト", "execution",
-                    timeout=600)
+        logger.error("実行タイムアウト", "execution",
+                    user=masked_name, timeout=600)
         return False
 
     except Exception as e:
-        logger.error(f"❌ {mask_name(user.user_name)} エラー", "execution",
-                    error_type=type(e).__name__)
+        logger.error("実行中の例外発生", "execution",
+                    user=masked_name, error_type=type(e).__name__)
         return False
 
 
@@ -170,6 +237,8 @@ def main():
                        help="バッチID（並列実行用）")
     parser.add_argument("--total-batches", type=int,
                        help="総バッチ数（並列実行用）")
+    parser.add_argument("--service-account-key",
+                       help="サービスアカウントキーファイルのパス")
 
     args = parser.parse_args()
 
@@ -178,8 +247,8 @@ def main():
                     spreadsheet_id=args.spreadsheet_id)
 
         # 1. Google Sheetsから読み込み
-        sheets_reader = GoogleSheetsReader()
-        sheets_data = sheets_reader.read_user_data(args.spreadsheet_id)
+        sheets_reader = GoogleSheetsReader(args.service_account_key)
+        sheets_data = sheets_reader.read_user_data(args.spreadsheet_id, args.range)
 
         logger.info(f"Google Sheetsから{len(sheets_data)}人読み込み", "sheets")
 
@@ -210,12 +279,23 @@ def main():
                 success_count += 1
 
         # 結果サマリー
-        logger.complete("実行完了", "execution",
-                       success=success_count,
-                       total=total_count,
-                       failed=total_count - success_count)
+        logger.info("実行結果サマリー", "execution",
+                   success=success_count, total=total_count,
+                   failed=total_count - success_count)
 
-        sys.exit(0 if success_count > 0 else 1)
+        # 終了コード: 3パターン
+        if total_count == 0:
+            logger.info("処理対象ユーザーなし", "execution")
+            sys.exit(0)
+        elif success_count == total_count:
+            logger.success("すべてのユーザーの分析が正常完了", "execution")
+            sys.exit(0)
+        elif success_count > 0:
+            logger.warning("一部のユーザーで分析に失敗したが、一部成功", "execution")
+            sys.exit(0)  # 部分成功は正常終了扱い
+        else:
+            logger.error("すべてのユーザーで分析に失敗", "execution")
+            sys.exit(1)
 
     except Exception as e:
         logger.error("実行エラー", "execution", error=str(e))
