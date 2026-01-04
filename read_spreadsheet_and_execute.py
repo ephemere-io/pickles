@@ -110,7 +110,11 @@ def execute_pickles_for_user(user: User, analysis_type: str,
             logger.success(f"✅ {mask_name(user.user_name)} 完了", "execution")
             return True
         else:
-            logger.error(f"❌ {mask_name(user.user_name)} 失敗", "execution")
+            # stderrの先頭200文字をログ出力（個人情報を含まない範囲）
+            stderr_preview = result.stderr[:200] if result.stderr else ""
+            logger.error(f"❌ {mask_name(user.user_name)} 失敗", "execution",
+                        return_code=result.returncode,
+                        stderr_preview=stderr_preview)
             return False
 
     except subprocess.TimeoutExpired:
