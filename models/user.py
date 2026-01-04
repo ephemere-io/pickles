@@ -104,8 +104,8 @@ class User:
 
             logger.info(f"✓ ユーザー更新: {mask_email(self.email)}", "user")
         else:
-            # 新規作成
-            result = supabase.table('users').insert({
+            # 新規作成（upsertで競合時は更新）
+            result = supabase.table('users').upsert({
                 'email': self.email,
                 'user_name': self.user_name,
                 'language': self.language,
@@ -113,10 +113,10 @@ class User:
                 'google_docs_url': self.google_docs_url,
                 'source_type': self.source_type,
                 'is_active': self.is_active
-            }).execute()
+            }, on_conflict='email').execute()
 
             self.id = result.data[0]['id']
-            logger.success(f"✨ ユーザー作成: {mask_email(self.email)}", "user")
+            logger.success(f"✨ ユーザー同期: {mask_email(self.email)}", "user")
 
         return self
 
