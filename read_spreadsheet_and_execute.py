@@ -176,11 +176,13 @@ def execute_pickles_for_user(user: User, analysis_type: str,
             logger.complete(f"{masked_name}のPickles実行 ({data_source})", "execution")
             return True
         else:
-            logger.failed(f"{masked_name}のPickles実行", "execution")
-            # stderrの先頭200文字をログ出力（個人情報を含まない範囲）
-            stderr_preview = result.stderr[:200] if result.stderr else ""
+            logger.failed(f"{masked_name}のPickles実行", "", "execution")
+            # stdout/stderrの先頭300文字をログ出力（エラー原因特定用）
+            stdout_preview = result.stdout[:300] if result.stdout else ""
+            stderr_preview = result.stderr[:300] if result.stderr else ""
             logger.error("実行エラー詳細", "execution",
                         return_code=result.returncode,
+                        stdout_preview=stdout_preview,
                         stderr_preview=stderr_preview)
             return False
 
