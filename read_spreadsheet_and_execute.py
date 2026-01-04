@@ -161,8 +161,22 @@ def execute_pickles_for_user(user: User, analysis_type: str,
         cmd.extend(["--source", "gdocs",
                    "--gdocs-url", user.google_docs_url])
 
-    # デバッグ: 実行コマンドをログ出力（APIキーはマスク）
-    safe_cmd = [c if '--api-key' not in c and 'secret' not in c.lower() else '***' for c in cmd]
+    # デバッグ: 実行コマンドをログ出力（個人情報はマスク）
+    # 機密情報を含む引数の次の値をマスク
+    sensitive_args = {'--email-to', '--user-name', '--gdocs-url', '--notion-api-key'}
+    safe_cmd = []
+    skip_next = False
+    for c in cmd:
+        if skip_next:
+            safe_cmd.append('***')
+            skip_next = False
+        elif c in sensitive_args:
+            safe_cmd.append(c)
+            skip_next = True
+        elif 'secret' in c.lower():
+            safe_cmd.append('***')
+        else:
+            safe_cmd.append(c)
     logger.debug("実行コマンド", "execution", cmd=" ".join(safe_cmd))
 
     logger.start(f"{masked_name}のPickles実行 ({data_source})", "execution")
@@ -177,13 +191,13 @@ def execute_pickles_for_user(user: User, analysis_type: str,
             return True
         else:
             logger.failed(f"{masked_name}のPickles実行", "", "execution")
-            # stdout/stderrの先頭300文字をログ出力（エラー原因特定用）
-            stdout_preview = result.stdout[:300] if result.stdout else ""
-            stderr_preview = result.stderr[:300] if result.stderr else ""
+            # stdout/stderrの末尾500文字をログ出力（エラーは通常末尾にある）
+            stdout_tail = result.stdout[-500:] if result.stdout else ""
+            stderr_tail = result.stderr[-500:] if result.stderr else ""
             logger.error("実行エラー詳細", "execution",
                         return_code=result.returncode,
-                        stdout_preview=stdout_preview,
-                        stderr_preview=stderr_preview)
+                        stdout_tail=stdout_tail,
+                        stderr_tail=stderr_tail)
             return False
 
     except subprocess.TimeoutExpired:
