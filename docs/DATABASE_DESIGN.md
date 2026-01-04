@@ -340,7 +340,7 @@ pickles/
 │   ├── analysis_run.py       # AnalysisRunドメインモデル
 │   └── delivery.py           # Deliveryドメインモデル
 │
-├── supabase/                  # Supabase関連
+├── db/                        # データベース関連
 │   ├── migrations/           # マイグレーションファイル
 │   │   ├── 20241215000000_create_users_table.sql
 │   │   ├── 20241215000001_create_analysis_runs_table.sql
@@ -399,10 +399,10 @@ Supabaseの最大活用のため、マイグレーションファイルで管理
 
 **ディレクトリ作成**:
 ```bash
-mkdir -p supabase/migrations
+mkdir -p db/migrations
 ```
 
-**1. `supabase/migrations/20241215000000_create_users_table.sql`**:
+**1. `db/migrations/20241215000000_create_users_table.sql`**:
 ```sql
 -- usersテーブル作成
 create table public.users (
@@ -446,7 +446,7 @@ comment on column public.users.email is 'Google Sheetsとの照合キー';
 comment on column public.users.is_active is 'アクティブ状態（Sheetsから削除時false）';
 ```
 
-**2. `supabase/migrations/20241215000001_create_analysis_runs_table.sql`**:
+**2. `db/migrations/20241215000001_create_analysis_runs_table.sql`**:
 ```sql
 -- analysis_runsテーブル作成
 create table public.analysis_runs (
@@ -493,7 +493,7 @@ comment on column public.analysis_runs.content is 'ユーザーに配信した�
 comment on column public.analysis_runs.stats_summary is '統計サマリー（例: 直近7日間: 21件、平均5092文字）';
 ```
 
-**3. `supabase/migrations/20241215000002_create_deliveries_table.sql`**:
+**3. `db/migrations/20241215000002_create_deliveries_table.sql`**:
 ```sql
 -- deliveriesテーブル作成
 create table public.deliveries (
@@ -533,7 +533,7 @@ create policy "Enable all access for service role"
 comment on table public.deliveries is '配信履歴（配信方法のメタデータのみ）';
 ```
 
-**4. `supabase/migrations/20241215000003_create_execution_history_view.sql`**:
+**4. `db/migrations/20241215000003_create_execution_history_view.sql`**:
 ```sql
 -- 実行履歴ビュー作成
 create or replace view public.execution_history as
@@ -584,7 +584,7 @@ supabase db push
 
 ### Step 3: Supabaseクライアント作成（5分）
 
-**`supabase/client.py`**:
+**`db/client.py`**:
 ```python
 """Supabaseクライアント初期化"""
 import os
@@ -623,7 +623,7 @@ __all__ = ['User', 'AnalysisRun', 'Delivery']
 """Userドメインモデル"""
 from typing import Optional, List, Dict
 from datetime import datetime
-from supabase.client import get_supabase_client
+from db.client import get_supabase_client
 from utils.logger import logger
 
 
@@ -810,7 +810,7 @@ class User:
 """AnalysisRunドメインモデル"""
 from typing import Optional
 import os
-from supabase.client import get_supabase_client
+from db.client import get_supabase_client
 from utils.logger import logger
 
 
@@ -939,7 +939,7 @@ class AnalysisRun:
 ```python
 """Deliveryドメインモデル"""
 from typing import Optional
-from supabase.client import get_supabase_client
+from db.client import get_supabase_client
 from utils.logger import logger
 
 

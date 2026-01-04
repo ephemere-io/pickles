@@ -1,7 +1,7 @@
 """AnalysisRunドメインモデル"""
 from typing import Optional
 import os
-from supabase.client import get_supabase_client
+from db.client import get_supabase_client
 from utils.logger import logger
 
 

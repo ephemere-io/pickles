@@ -376,7 +376,7 @@ Google Docsをデータソースとして使用する場合、使用する環境
 Option A: Supabase Dashboard（推奨・簡単）
 ```
 1. Dashboard > SQL Editor を開く
-2. supabase/migrations/ 配下のファイルを順番に実行:
+2. db/migrations/ 配下のファイルを順番に実行:
    - 20241215000000_create_users_table.sql
    - 20241215000001_create_analysis_runs_table.sql
    - 20241215000002_create_deliveries_table.sql
@@ -442,7 +442,7 @@ pickles/
 │   ├── user.py               # Userドメインモデル（Google Sheets同期）
 │   ├── analysis_run.py       # AnalysisRunドメインモデル（実行履歴）
 │   └── delivery.py           # Deliveryドメインモデル（配信履歴）
-├── supabase/                  # Supabase関連（Phase 0）
+├── db/                        # データベース関連（Phase 0）
 │   ├── migrations/           # マイグレーションファイル
 │   │   ├── 20241215000000_create_users_table.sql
 │   │   ├── 20241215000001_create_analysis_runs_table.sql
