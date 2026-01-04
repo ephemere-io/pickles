@@ -8,12 +8,11 @@ python read_spreadsheet_and_execute.py --spreadsheet-id <SPREADSHEET_ID> --analy
 
 import argparse
 import sys
-import os
 import subprocess
 from typing import List, Dict
 from utils.logger import logger
 from utils.google_service import GoogleServiceFactory
-from models.user import User
+from models.user import User, mask_name
 
 
 class GoogleSheetsReader:
@@ -76,8 +75,7 @@ def execute_pickles_for_user(user: User, analysis_type: str,
         成功したかどうか
     """
 
-    logger.info(f"🎯 {user.user_name} の分析開始", "execution",
-               email=user.email)
+    logger.info(f"🎯 {mask_name(user.user_name)} の分析開始", "execution")
 
     user_data = user.to_dict()
 
@@ -106,16 +104,15 @@ def execute_pickles_for_user(user: User, analysis_type: str,
         if result.returncode == 0:
             # 最終分析時刻を更新
             user.update_last_analysis_at()
-            logger.success(f"✅ {user.user_name} 完了", "execution")
+            logger.success(f"✅ {mask_name(user.user_name)} 完了", "execution")
             return True
         else:
-            logger.error(f"❌ {user.user_name} 失敗", "execution",
-                        error=result.stderr)
+            logger.error(f"❌ {mask_name(user.user_name)} 失敗", "execution")
             return False
 
     except Exception as e:
-        logger.error(f"❌ {user.user_name} エラー", "execution",
-                    error=str(e))
+        logger.error(f"❌ {mask_name(user.user_name)} エラー", "execution",
+                    error_type=type(e).__name__)
         return False
 
 
@@ -161,7 +158,7 @@ def main():
         logger.info(f"📊 {total_count}人のユーザーに対して分析実行", "execution")
 
         for i, user in enumerate(users, 1):
-            logger.info(f"[{i}/{total_count}] {user.user_name}", "execution")
+            logger.info(f"[{i}/{total_count}] {mask_name(user.user_name)}", "execution")
 
             if execute_pickles_for_user(user, args.analysis,
                                        args.delivery, args.days):

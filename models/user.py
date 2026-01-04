@@ -5,6 +5,27 @@ from supabase.client import get_supabase_client
 from utils.logger import logger
 
 
+def mask_email(email: str) -> str:
+    """メールアドレスをマスク（例: t***@example.com）"""
+    if not email or '@' not in email:
+        return '***'
+    local, domain = email.split('@', 1)
+    if len(local) <= 1:
+        masked_local = '*'
+    else:
+        masked_local = local[0] + '***'
+    return f"{masked_local}@{domain}"
+
+
+def mask_name(name: str) -> str:
+    """ユーザー名をマスク（例: 山田太郎 → 山***）"""
+    if not name:
+        return '***'
+    if len(name) <= 1:
+        return '*'
+    return name[0] + '***'
+
+
 class User:
     """ユーザードメインモデル
 
@@ -81,7 +102,7 @@ class User:
                 'updated_at': 'now()'
             }).eq('id', self.id).execute()
 
-            logger.info(f"✓ ユーザー更新: {self.email}", "user")
+            logger.info(f"✓ ユーザー更新: {mask_email(self.email)}", "user")
         else:
             # 新規作成
             result = supabase.table('users').insert({
@@ -95,7 +116,7 @@ class User:
             }).execute()
 
             self.id = result.data[0]['id']
-            logger.success(f"✨ ユーザー作成: {self.email} ({self.id})", "user")
+            logger.success(f"✨ ユーザー作成: {mask_email(self.email)}", "user")
 
         return self
 
@@ -103,7 +124,7 @@ class User:
         """ユーザーを非アクティブ化"""
         self.is_active = False
         self.save()
-        logger.warning(f"⚠️  ユーザー非アクティブ化: {self.email}", "user")
+        logger.warning(f"⚠️  ユーザー非アクティブ化: {mask_email(self.email)}", "user")
 
     def update_last_analysis_at(self):
         """最終分析時刻を更新"""
