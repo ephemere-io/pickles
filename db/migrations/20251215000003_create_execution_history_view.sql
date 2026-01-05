@@ -1,5 +1,7 @@
--- 実行履歴ビュー作成
-create or replace view public.execution_history as
+-- 実行履歴ビュー作成（Security Invoker - RLS適用）
+create or replace view public.execution_history
+with (security_invoker = true)
+as
 select
     u.email,
     u.user_name,
@@ -7,6 +9,9 @@ select
     ar.days_analyzed,
     ar.source_used,
     ar.status as analysis_status,
+    ar.raw_data_count,
+    ar.filtered_data_count,
+    ar.avg_text_length,
     ar.trigger_type,
     ar.trigger_id,
     ar.created_at as analysis_started_at,
@@ -22,4 +27,4 @@ left join public.deliveries d on d.analysis_run_id = ar.id
 order by ar.created_at desc;
 
 -- コメント
-comment on view public.execution_history is '実行履歴の統合ビュー（分析 + 配信）';
+comment on view public.execution_history is '実行履歴の統合ビュー（Security Invoker - RLS適用）';

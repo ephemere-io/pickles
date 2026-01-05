@@ -10,7 +10,9 @@ create table public.analysis_runs (
 
     -- 分析結果
     content text,
-    stats_summary text,
+    raw_data_count integer,
+    filtered_data_count integer,
+    avg_text_length integer,
 
     -- 実行メタデータ
     status text not null check (status in ('pending', 'running', 'completed', 'failed')),
@@ -31,13 +33,16 @@ create index idx_analysis_runs_created_at on public.analysis_runs(created_at des
 -- RLS有効化
 alter table public.analysis_runs enable row level security;
 
--- ポリシー
-create policy "Enable all access for service role"
+-- ポリシー（service_roleのみアクセス可能）
+create policy "Service role only"
   on public.analysis_runs
   for all
-  using (true);
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
 
 -- コメント
 comment on table public.analysis_runs is '分析実行履歴';
 comment on column public.analysis_runs.content is 'ユーザーに配信したレポート本文（Markdown形式）';
-comment on column public.analysis_runs.stats_summary is '統計サマリー（例: 直近7日間: 21件、平均5092文字）';
+comment on column public.analysis_runs.raw_data_count is '取得データ数';
+comment on column public.analysis_runs.filtered_data_count is 'フィルタ後データ数（実際の分析対象）';
+comment on column public.analysis_runs.avg_text_length is '平均文字数';
