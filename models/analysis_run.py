@@ -21,7 +21,9 @@ class AnalysisRun:
         days_analyzed: int,
         source_used: str,
         content: Optional[str] = None,
-        stats_summary: Optional[str] = None,
+        raw_data_count: Optional[int] = None,
+        filtered_data_count: Optional[int] = None,
+        avg_text_length: Optional[int] = None,
         status: str = 'pending',
         error_message: Optional[str] = None,
         trigger_type: Optional[str] = None,
@@ -35,7 +37,9 @@ class AnalysisRun:
         self.days_analyzed = days_analyzed
         self.source_used = source_used
         self.content = content
-        self.stats_summary = stats_summary
+        self.raw_data_count = raw_data_count
+        self.filtered_data_count = filtered_data_count
+        self.avg_text_length = avg_text_length
         self.status = status
         self.error_message = error_message
         self.trigger_type = trigger_type or self._detect_trigger_type()
@@ -81,7 +85,9 @@ class AnalysisRun:
             result = supabase.table('analysis_runs').update({
                 'status': self.status,
                 'content': self.content,
-                'stats_summary': self.stats_summary,
+                'raw_data_count': self.raw_data_count,
+                'filtered_data_count': self.filtered_data_count,
+                'avg_text_length': self.avg_text_length,
                 'error_message': self.error_message,
                 'completed_at': 'now()' if self.status in ['completed', 'failed'] else None
             }).eq('id', self.id).execute()
@@ -93,7 +99,9 @@ class AnalysisRun:
                 'days_analyzed': self.days_analyzed,
                 'source_used': self.source_used,
                 'content': self.content,
-                'stats_summary': self.stats_summary,
+                'raw_data_count': self.raw_data_count,
+                'filtered_data_count': self.filtered_data_count,
+                'avg_text_length': self.avg_text_length,
                 'status': self.status,
                 'error_message': self.error_message,
                 'trigger_type': self.trigger_type,
@@ -110,13 +118,22 @@ class AnalysisRun:
         self.status = 'running'
         self.save()
 
-    def mark_completed(self, content: str, stats_summary: str):
+    def mark_completed(
+        self,
+        content: str,
+        raw_data_count: int,
+        filtered_data_count: int,
+        avg_text_length: int
+    ):
         """完了に変更"""
         self.status = 'completed'
         self.content = content
-        self.stats_summary = stats_summary
+        self.raw_data_count = raw_data_count
+        self.filtered_data_count = filtered_data_count
+        self.avg_text_length = avg_text_length
         self.save()
-        logger.success(f"✅ 分析完了: {self.id}", "analysis")
+        logger.success(f"✅ 分析完了: {self.id}", "analysis",
+                      filtered_count=filtered_data_count)
 
     def mark_failed(self, error_message: str):
         """失敗に変更"""

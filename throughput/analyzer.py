@@ -65,9 +65,17 @@ class DocumentAnalyzer:
         else:
             insights = self._generate_insights(filtered_data, analysis_type, language)
         
+        # 平均文字数を計算
+        total_length = sum(len(item.get("text", "")) for item in filtered_data)
+        avg_length = total_length // len(filtered_data) if filtered_data else 0
+
         return {
             "statistics": stats,
             "insights": insights,
+            "raw_data_count": len(raw_data),
+            "filtered_data_count": len(filtered_data),
+            "avg_text_length": avg_length,
+            # 後方互換性のため残す
             "data_count": len(filtered_data),
             "context_data_count": len(filtered_context_data) if filtered_context_data else 0
         }
