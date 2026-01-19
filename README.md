@@ -4,6 +4,8 @@
 
 NotionデータベースまたはGoogle DocsとOpenAI APIを使用して、日記エントリから感情・思考の分析レポートを自動生成・配信するPythonアプリケーションです。単体実行とマルチユーザー対応のGitHub Actions実行に対応しています。
 
+**Phase 0実装**: Supabaseによる実行履歴管理とドメインモデルアーキテクチャを導入し、将来の発酵システム（多層ベクトル検索）への基盤を構築しました。
+
 ## 🚀 クイックスタート
 
 > [!NOTE]
@@ -49,6 +51,10 @@ NOTION_API_KEY=your_notion_api_key_here
 
 # OpenAI API設定（必須）
 OPENAI_API_KEY=your_openai_api_key_here
+
+# Supabase設定（Phase 0: 実行履歴管理）
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_KEY=sb_secret_your_key_here
 
 # Google API設定（Google SheetsやGoogle Docsを使用する場合は必須）
 # JSON全体を1行で記述してください
@@ -150,6 +156,13 @@ PICKLES_TEST_SPECIFIC_MOCK_FILE=mock_data_1.json
 <td><code>--source notion</code>時、未指定は環境変数<code>NOTION_API_KEY</code></td>
 </tr>
 <tr>
+<td><code>--user-id</code></td>
+<td>ユーザーID</td>
+<td>UUID文字列</td>
+<td>-</td>
+<td>Phase 0: Supabase users テーブルのUUID（必須）</td>
+</tr>
+<tr>
 <td><code>--help</code></td>
 <td>ヘルプ表示</td>
 <td>フラグ</td>
@@ -161,27 +174,32 @@ PICKLES_TEST_SPECIFIC_MOCK_FILE=mock_data_1.json
 ## 💡 実行例
 
 ```bash
+# Phase 0: user-id指定が必須
+# ユーザーIDはSupabase usersテーブルから取得
+
 # 基本実行（Notion + DOMI + コンソール出力）
-uv run python main.py
+uv run python main.py --user-id "12345678-1234-1234-1234-123456789abc"
 
 # 英語でメール送信
-uv run python main.py --delivery email_html --language english
+uv run python main.py --user-id "12345678-..." --delivery email_html --language english
 
 # Google Docsから分析
-uv run python main.py --source gdocs
+uv run python main.py --user-id "12345678-..." --source gdocs
 
 # 30日コンテキストでAGA分析
-uv run python main.py --analysis aga --days 30
+uv run python main.py --user-id "12345678-..." --analysis aga --days 30
 
 # 複数配信方法
-uv run python main.py --delivery console,email_html,file_text
+uv run python main.py --user-id "12345678-..." --delivery console,email_html,file_text
 
 # 指定実行（Notion）
-uv run python main.py --user-name "田中太郎" --email-to "tanaka@example.com" --notion-api-key "secret_xxx"
+uv run python main.py --user-id "12345678-..." --user-name "田中太郎" --email-to "tanaka@example.com" --notion-api-key "secret_xxx"
 
 # 指定実行（Google Docs）
-uv run python main.py --source gdocs --gdocs-url "https://docs.google.com/document/d/DOC_ID" --user-name "田中太郎"
+uv run python main.py --user-id "12345678-..." --source gdocs --gdocs-url "https://docs.google.com/document/d/DOC_ID" --user-name "田中太郎"
 
+# マルチユーザー実行（Google Sheets自動同期）
+uv run python read_spreadsheet_and_execute.py --spreadsheet-id "YOUR_SHEET_ID" --analysis domi --delivery email_html
 
 # 詳細ヘルプ表示
 uv run python main.py --help
@@ -236,10 +254,25 @@ uv run python main.py --help
 <details>
 <summary><strong>🤖 GitHub Actions マルチユーザー実行</strong> - 複数ユーザーの自動分析・配信</summary>
 
-- **Google Sheets連携**: スプレッドシートからユーザー情報を一括読み込み
+- **Google Sheets + Supabase自動同期**: スプレッドシートからユーザー情報を読み込み、Supabaseと自動同期
+- **UUID管理**: メールアドレスをキーに永続的なUUIDを付与
 - **定期実行**: 毎週月曜7:00に自動実行
 - **個別設定**: ユーザーごとに言語・APIキー・送信先を設定可能
+- **実行履歴記録**: 分析実行と配信の履歴をSupabaseに保存
 - **手動実行**: 任意のタイミングで実行可能
+
+</details>
+
+<details>
+<summary><strong>🗄️ Phase 0: 実行履歴管理とドメインモデル</strong> - Supabaseによる永続化</summary>
+
+- **ユーザー管理**: Google Sheetsから自動同期、UUID管理
+- **分析実行履歴**: 実行パラメータ、結果、ステータスを記録
+- **配信履歴**: 配信方法、成功/失敗、エラーログを記録
+- **ドメインモデルアーキテクチャ**: User, AnalysisRun, Delivery モデルで保守性向上
+- **将来への準備**: Phase 1の発酵システム（多層ベクトル検索）への基盤
+
+詳細は `docs/DATABASE_DESIGN.md` を参照
 
 </details>
 
@@ -325,6 +358,55 @@ Google Docsをデータソースとして使用する場合、使用する環境
 </details>
 
 <details>
+<summary>🗄️ Supabase設定（Phase 0）</summary>
+
+**目的**: 実行履歴管理とユーザーUUID管理
+
+1. [Supabase](https://supabase.com/)で新規プロジェクトを作成
+2. プロジェクト名: `pickles-production` (任意)
+3. リージョン: `Northeast Asia (Tokyo)` を推奨
+4. Settings > API タブから以下を取得:
+   - **Project URL** → `SUPABASE_URL`
+   - **Secret Key** (`sb_secret_...` で始まるキー) → `SUPABASE_KEY`
+
+   注: サーバーサイド実行のためSecret Keyを使用します
+
+**マイグレーションの適用**:
+
+Option A: Supabase Dashboard（推奨・簡単）
+```
+1. Dashboard > SQL Editor を開く
+2. db/migrations/ 配下のファイルを順番に実行:
+   - 20241215000000_create_users_table.sql
+   - 20241215000001_create_analysis_runs_table.sql
+   - 20241215000002_create_deliveries_table.sql
+   - 20241215000003_create_execution_history_view.sql
+```
+
+Option B: Supabase CLI
+```bash
+# CLI インストール（初回のみ）
+brew install supabase/tap/supabase
+
+# ログイン
+supabase login
+
+# プロジェクトリンク
+supabase link --project-ref YOUR_PROJECT_REF
+
+# マイグレーション適用
+supabase db push
+```
+
+**確認方法**:
+1. Dashboard > Table Editor を開く
+2. `users`, `analysis_runs`, `deliveries` テーブルが作成されていることを確認
+
+詳細は `docs/DATABASE_DESIGN.md` を参照
+
+</details>
+
+<details>
 <summary>📧 メール設定</summary>
 
 Gmail使用時の設定例：
@@ -354,7 +436,19 @@ AWS SES使用時の設定例：
 ```
 pickles/
 ├── main.py                    # メインアプリケーション・エントリーポイント
-├── read_spreadsheet_and_execute.py  # マルチユーザー実行スクリプト
+├── read_spreadsheet_and_execute.py  # マルチユーザー実行スクリプト（Google Sheets同期）
+├── models/                    # ドメインモデル（Phase 0）
+│   ├── __init__.py
+│   ├── user.py               # Userドメインモデル（Google Sheets同期）
+│   ├── analysis_run.py       # AnalysisRunドメインモデル（実行履歴）
+│   └── delivery.py           # Deliveryドメインモデル（配信履歴）
+├── db/                        # データベース関連（Phase 0）
+│   ├── migrations/           # マイグレーションファイル
+│   │   ├── 20241215000000_create_users_table.sql
+│   │   ├── 20241215000001_create_analysis_runs_table.sql
+│   │   ├── 20241215000002_create_deliveries_table.sql
+│   │   └── 20241215000003_create_execution_history_view.sql
+│   └── client.py             # Supabaseクライアント初期化
 ├── inputs/
 │   ├── __init__.py           # データ入力モジュール
 │   ├── notion_input.py       # Notionデータ取得（統合クラス設計）
@@ -374,6 +468,9 @@ pickles/
 │   ├── logger.py             # ログ出力（テキストレベル表示）
 │   ├── printer.py            # ヘルプ表示・定数定義
 │   └── google_service.py     # Google API認証・サービス初期化
+├── docs/                      # ドキュメント
+│   ├── DATABASE_DESIGN.md    # Phase 0: データベース設計
+│   └── FERMENTATION_DESIGN.md # Phase 1+: 発酵システム設計
 ├── tests/                    # テストスイート
 │   ├── README.md             # テストドキュメント
 │   ├── __init__.py
@@ -390,7 +487,9 @@ pickles/
 │       ├── test_option_combinations.py # オプション組み合わせテスト（全モックデータ）
 │       └── test_error_handling.py   # エラーハンドリングテスト（全モックデータ）
 ├── .github/workflows/
-│   ├── weekly-report.yml     # GitHub Actions マルチユーザー実行
+│   ├── pickles-report-production.yml  # 本番環境マルチユーザー実行
+│   ├── pickles-report-prototype.yml   # テスト環境マルチユーザー実行
+│   ├── pickles-report-admin.yml       # 管理者環境実行
 │   └── setup-secrets.md      # GitHub Actions設定ガイド
 ├── example.env               # 環境変数のテンプレート
 ├── .env                      # 環境変数（要作成、Gitにコミットしない）
@@ -475,6 +574,12 @@ service_account_key.json
 
 ### 必要なGitHub Secrets
 GitHub Actionsを使用する場合、以下のSecretsを設定してください：
+
+**Phase 0で追加**:
+- `SUPABASE_URL`: Supabaseプロジェクトの URL
+- `SUPABASE_KEY`: Supabase Secret Key (`sb_secret_...` 形式)
+
+**既存のSecrets**:
 - `OPENAI_API_KEY`: OpenAI APIキー
 - `GOOGLE_SERVICE_ACCOUNT_KEY`: Google Service AccountのJSON鍵（全体）
 - `EMAIL_USER`: メール送信用ユーザー名

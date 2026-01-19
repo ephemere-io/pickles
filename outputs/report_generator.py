@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 
 # 定数をインポート
 from utils import DeliveryMethods, logger
+from models.user import mask_email
 
 load_dotenv()
 
@@ -302,8 +303,8 @@ class ReportDelivery:
         """テキストメールを送信"""
         # テストモードの場合はモックを使用
         if os.getenv('PICKLES_TEST_MODE') == '1':
-            logger.info("テストモード: メール送信をスキップ", "email", 
-                       subject=subject, to=self.to_email)
+            logger.info("テストモード: メール送信をスキップ", "email",
+                       subject=subject, to=mask_email(self.to_email))
             return True
         
         if not self._check_email_config():
@@ -329,18 +330,17 @@ class ReportDelivery:
         """HTMLメールを送信（CID画像埋め込み対応）"""
         # テストモードの場合はモックを使用
         if os.getenv('PICKLES_TEST_MODE') == '1':
-            logger.info("テストモード: HTMLメール送信をスキップ", "email", 
-                       subject=subject, to=self.to_email)
+            logger.info("テストモード: HTMLメール送信をスキップ", "email",
+                       subject=subject, to=mask_email(self.to_email))
             return True
         
         if not self._check_email_config():
             raise OutputError("メール設定が不完全です。環境変数を確認してください。")
         
         try:
-            logger.start("HTMLメール送信処理", "email", 
-                        to_email=self.to_email, 
+            logger.start("HTMLメール送信処理", "email",
+                        to_email=mask_email(self.to_email),
                         subject=subject,
-                        from_user=self.username, 
                         smtp_server=f"{self.smtp_host}:{self.smtp_port}")
             
             # マルチパートメッセージを作成
@@ -363,7 +363,7 @@ class ReportDelivery:
                 server.login(self.username, self.password)
                 logger.debug("ログイン成功", "email")
                 server.send_message(msg)
-                logger.complete("HTMLメール送信", "email", to_email=self.to_email)
+                logger.complete("HTMLメール送信", "email", to_email=mask_email(self.to_email))
             
             return True
             

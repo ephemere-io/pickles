@@ -18,6 +18,7 @@ from inputs import NotionInput, NotionInputError, GdocsInput, GdocsInputError
 from throughput import DocumentAnalyzer, AnalysisError
 from outputs import ReportDelivery, OutputError
 from utils import logger, UsagePrinter, CommandArgs, DataSources, AnalysisTypes, DeliveryMethods
+from models import AnalysisRun, Delivery
 
 
 class PicklesSystem:
@@ -44,15 +45,17 @@ class PicklesSystem:
         self._delivery = ReportDelivery(email_config=email_config)
         # グローバルloggerインスタンスを使用
         
-    def run_analysis(self, 
+    def run_analysis(self,
+                    user_id: str,
                     data_source: str = "notion",
                     analysis_type: str = "comprehensive",
                     delivery_methods: List[str] = None,
                     language: str = None,
                     days: int = 7) -> Dict[str, str]:
         """分析を実行してレポートを生成・配信
-        
+
         Args:
+            user_id: ユーザーID（UUID）
             data_source: データソース
             analysis_type: 分析タイプ
             delivery_methods: 配信方法
@@ -77,7 +80,17 @@ class PicklesSystem:
             logger.error("分析日数が最小値未満", "system", days=days, minimum=7)
             return {"error": "分析日数は最低7日必要です"}
 
+        # 分析実行を作成（Supabaseに記録）
+        analysis_run = AnalysisRun.create(
+            user_id=user_id,
+            analysis_type=analysis_type,
+            days_analyzed=days,
+            source_used=data_source
+        )
+
         try:
+            # 分析実行中に変更
+            analysis_run.mark_running()
             # コンテキスト用データ取得（days > 7の場合）
             context_data = None
             week_data = None
@@ -137,25 +150,66 @@ class PicklesSystem:
             
             logger.complete(f"{analysis_type}分析処理", "ai", analyzed_count=analysis_result['data_count'])
 
+            # 分析完了をSupabaseに記録
+            analysis_run.mark_completed(
+                content=analysis_result.get('insights', ''),
+                raw_data_count=analysis_result.get('raw_data_count', 0),
+                filtered_data_count=analysis_result.get('filtered_data_count', 0),
+                avg_text_length=analysis_result.get('avg_text_length', 0)
+            )
+
             # レポート配信
             logger.start("レポート配信処理", "system", methods=delivery_methods)
-            delivery_results = self._delivery.deliver_report(
-                analysis_result,
-                delivery_methods=delivery_methods,
-                report_format="comprehensive"
-            )
+            delivery_results = {}
+
+            # 各配信方法に対してDeliveryレコードを作成
+            for method in delivery_methods:
+                # 配信方法がemail系の場合はemail_toを設定
+                email_to = None
+                if 'email' in method and self._delivery.to_email:
+                    email_to = self._delivery.to_email
+
+                delivery = Delivery.create(
+                    analysis_run_id=analysis_run.id,
+                    delivery_method=method,
+                    email_to=email_to
+                )
+
+                try:
+                    # 個別に配信実行
+                    result = self._delivery.deliver_report(
+                        analysis_result,
+                        delivery_methods=[method],
+                        report_format="comprehensive"
+                    )
+
+                    # 成功判定
+                    if method in result and "成功" in str(result[method]):
+                        delivery.mark_sent()
+                        delivery_results[method] = result[method]
+                    else:
+                        error_msg = result.get(method, "配信失敗")
+                        delivery.mark_failed(str(error_msg))
+                        delivery_results[method] = error_msg
+
+                except Exception as e:
+                    delivery.mark_failed(str(e))
+                    delivery_results[method] = f"配信エラー: {str(e)}"
+
             logger.complete("レポート配信処理", "system", method_count=len(delivery_methods))
-            
+
             return delivery_results
             
         except (NotionInputError, GdocsInputError, AnalysisError, OutputError) as e:
             error_msg = str(e)
             logger.error("アプリケーションエラー", "system", error_type=type(e).__name__, details=error_msg)
+            analysis_run.mark_failed(error_msg)
             return {"error": error_msg}
-        
+
         except Exception as e:
             error_msg = f"予期しないエラー: {e}"
             logger.error("予期しないエラー", "system", error_type=type(e).__name__, details=str(e))
+            analysis_run.mark_failed(error_msg)
             return {"error": error_msg}
     
     def _fetch_data(self, data_source: str, days: int) -> List[Dict[str, str]]:
@@ -230,8 +284,9 @@ class PicklesSystem:
     def _parse_command_args(self, args: List[str]) -> Dict[str, any]:
         """コマンドライン引数を解析"""
         default_args = {
+            "user_id": None,
             "source": DataSources.NOTION,
-            "analysis": AnalysisTypes.DOMI, 
+            "analysis": AnalysisTypes.DOMI,
             "delivery": [DeliveryMethods.CONSOLE],
             "days": 7,
             "user_name": None,
@@ -246,9 +301,12 @@ class PicklesSystem:
         
         while i < len(args):
             arg = args[i]
-            
+
             if arg == CommandArgs.HELP:
                 return {"help": True}
+            elif arg == "--user-id" and i + 1 < len(args):
+                parsed_args["user_id"] = args[i + 1]
+                i += 1
             elif arg == CommandArgs.SOURCE and i + 1 < len(args):
                 source_value = args[i + 1]
                 valid_data_sources = [DataSources.NOTION, DataSources.GDOCS]
@@ -314,8 +372,9 @@ class PicklesSystem:
 def parse_command_args(args: List[str]) -> Dict[str, any]:
     """コマンドライン引数を解析（スタンドアロン関数）"""
     default_args = {
+        "user_id": None,
         "source": DataSources.NOTION,
-        "analysis": AnalysisTypes.DOMI, 
+        "analysis": AnalysisTypes.DOMI,
         "delivery": [DeliveryMethods.CONSOLE],
         "days": 7,
         "user_name": None,
@@ -327,12 +386,15 @@ def parse_command_args(args: List[str]) -> Dict[str, any]:
     
     parsed_args = default_args.copy()
     i = 1
-    
+
     while i < len(args):
         arg = args[i]
-        
+
         if arg == CommandArgs.HELP:
             return {"help": True}
+        elif arg == "--user-id" and i + 1 < len(args):
+            parsed_args["user_id"] = args[i + 1]
+            i += 1
         elif arg == CommandArgs.SOURCE and i + 1 < len(args):
             source_value = args[i + 1]
             valid_data_sources = [DataSources.NOTION, DataSources.GDOCS]
@@ -426,8 +488,15 @@ def main() -> None:
                days=args["days"],
                language=args['language'])
     
+    # user_idの検証（必須パラメータ）
+    if not args.get("user_id"):
+        logger.error("user_idが指定されていません", "system")
+        print("エラー: --user-id が必須です")
+        sys.exit(1)
+
     # 分析実行
     results = system.run_analysis(
+        user_id=args["user_id"],
         data_source=args["source"],
         analysis_type=args["analysis"],
         delivery_methods=args["delivery"],

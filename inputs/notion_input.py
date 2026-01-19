@@ -4,6 +4,7 @@ from typing import List, Dict, Optional
 from notion_client import Client
 from dotenv import load_dotenv
 from utils import logger
+from models.user import mask_name
 
 load_dotenv()
 
@@ -509,7 +510,7 @@ class NotionInput:
         try:
             # ユーザー情報を取得してAPIキーが有効か確認
             user_info = self._client.users.me()
-            logger.success("Notion API接続成功", "notion", user=user_info.get('name', 'Unknown User'))
+            logger.success("Notion API接続成功", "notion", user=mask_name(user_info.get('name', 'Unknown User')))
             
             # 簡単な検索を実行してアクセス権限を確認
             test_search = self._client.search(
