@@ -1,6 +1,7 @@
 # Pickles 多層発酵システム 設計ドキュメント
 
 > 日記データから「思いがけない接続」を発見し、時間による変容を層として蓄積していく発酵体験の設計
+> 
 
 ---
 
@@ -9,29 +10,25 @@
 ### 本質的な体験目標
 
 1. **思いがけない接続の発見**
-   - 書いた本人も気づいていなかったリンクをAIが見つけて提示
-   - 「異なることが繋がっている」驚き
-   - 20年前の記録と今が突然リンクする体験
-
+    - 書いた本人も気づいていなかったリンクをAIが見つけて提示
+    - 「異なることが繋がっている」驚き
+    - 20年前の記録と今が突然リンクする体験
 2. **可能性の提示に留める**（センスメイキングを奪わない）
-   - 要約や解釈をAIに委ねない
-   - 「こういうテーマだったのかも」という問いかけ
-   - ユーザー自身が意味を見出す余地を残す
-
+    - 要約や解釈をAIに委ねない
+    - 「こういうテーマだったのかも」という問いかけ
+    - ユーザー自身が意味を見出す余地を残す
 3. **馴染みのバーテンダー/美容師体験**
-   - 見守ってくれている存在
-   - 自分のことを知ってくれている安心感
-   - また通いたくなる関係性
-
+    - 見守ってくれている存在
+    - 自分のことを知ってくれている安心感
+    - また通いたくなる関係性
 4. **複雑化による創発**（発酵のメタファー）
-   - シンプルなものが複雑になって返ってくる
-   - 接種した時に想像力が膨らむ
-   - 謎でいい、分かりやすくなくていい
-
+    - シンプルなものが複雑になって返ってくる
+    - 接種した時に想像力が膨らむ
+    - 謎でいい、分かりやすくなくていい
 5. **時間による変性のレイヤー構造**（新規）
-   - 週、月、四半期、年という時間単位での発酵
-   - 各レイヤーが独自のベクトル空間を持つ
-   - 下層のデータを原料として上層が生成される
+    - 週、月、四半期、年という時間単位での発酵
+    - 各レイヤーが独自のベクトル空間を持つ
+    - 下層のデータを原料として上層が生成される
 
 ### 避けるべきアンチパターン
 
@@ -62,13 +59,14 @@
 ### レイヤーの特性
 
 各レイヤーは：
+
 - **独自の発酵プロンプト**を持つ（システムプロンプト + 強調点）
 - **下層のベクトルデータを原料**として変性
 - **新たなベクトル空間**に結晶化
 - **検索対象として混在**可能（重み付け検索）
 
 | レイヤー | 深度 | 原料 | 発酵頻度 | 強調点 |
-|---------|------|------|---------|--------|
+| --- | --- | --- | --- | --- |
 | 日記 | 0 | 直接入力 | 毎日 | - |
 | 週次 | 1 | 7日分のジャーナル | 毎週月曜 | 微細な変化の兆し |
 | 月次 | 2 | 4週分の週次ノード | 毎月1日 | 通底するテーマ |
@@ -81,7 +79,7 @@
 
 ### ユーザー管理の統合
 
-#### 現状の課題
+### 現状の課題
 
 現在のPicklesは`read_spreadsheet_and_execute.py`でGoogle Sheetsからユーザー情報を読み込んで実行していますが、この方式には以下の問題があります：
 
@@ -97,12 +95,13 @@ user_data = {
 ```
 
 **問題点**:
+
 - ❌ 永続的なユーザーID（UUID）がない
 - ❌ Supabaseの`journals`や`fermentation_nodes`に紐付けるIDが存在しない
 - ❌ スプレッドシートの行番号は不安定（削除・並び替えで変わる）
 - ❌ ユーザーの追加・削除履歴が追跡できない
 
-#### 解決策：Supabase usersテーブルの導入
+### 解決策：Supabase usersテーブルの導入
 
 発酵システムでは、すべてのデータがユーザーUUIDに紐付く必要があります。
 
@@ -259,16 +258,19 @@ create index fermentation_lineage_parent_idx on fermentation_lineage(parent_node
 ### 設計の理由
 
 **なぜ content と embedding を両方保存？**
+
 - `content`: **人が読む**原文／LLMに引用で渡す
 - `embedding`: **機械が似ている文章を探す**ための座標
 - どちらか一方だけだと「見せられない／探せない」片手落ちになる
 
 **なぜ fermentation_nodes は layer_depth を持つ？**
+
 - 検索時に「どの層から来たか」を判別するため
 - レポートで「週次発酵」「月次熟成」などのラベル表示
 - レイヤー別の重み付け検索に利用
 
 **なぜ fermentation_lineage が必要？**
+
 - 発酵の系譜をたどれる（どのジャーナルから生まれたか）
 - 「この月次ノードは、どの週次ノードから作られたか」を追跡
 - Phase 2以降で発酵プロセスの可視化に利用
@@ -336,6 +338,7 @@ $$ language sql stable;
 ```
 
 **RPC関数の利点**:
+
 - Supabase Python SDKから `supabase.rpc("関数名", 引数)` で直接呼べる
 - クライアント側で複雑なSQLを書かずに済む
 - pgvectorの最適化された検索を利用
@@ -544,7 +547,7 @@ class LayeredFermenter:
             emphasis=emphasis,
             period=f"{sources[0]['period_start']} 〜 {sources[-1]['period_end']}",
             source_count=len(sources),
-            sources='\n---\n'.join(source_texts)
+            sources='\\n---\\n'.join(source_texts)
         )
 
         response = self.openai.chat.completions.create(
@@ -834,21 +837,24 @@ class LayeredSearch:
 ---
 
 ## 🌀 発酵の深度マップ
+```
 
 ```
-        ┌─ 今週のあなた ─┐
-        │               │
-    [生の記録]      [週次発酵]
-     487日前         8週前
-      0.82           0.76
-        │               │
-        └──[月次熟成]───┘
-           3ヶ月前
-            0.71
-              │
-        [季節変容]
-         6ヶ月前
-          0.68
+    ┌─ 今週のあなた ─┐
+    │               │
+[生の記録]      [週次発酵]
+ 487日前         8週前
+  0.82           0.76
+    │               │
+    └──[月次熟成]───┘
+       3ヶ月前
+        0.71
+          │
+    [季節変容]
+     6ヶ月前
+      0.68
+```
+
 ```
 
 *時間が重ねた発酵の層が、今週のあなたと響き合っています*
@@ -860,7 +866,7 @@ class LayeredSearch:
 
 ### ユーザー登録の3つのアプローチ
 
-#### オプションA: 手動SQL登録（最速・推奨）
+### オプションA: 手動SQL登録（最速・推奨）
 
 **実装時間**: 15分
 **適用場面**: 初期ユーザー数が少ない（5-20人程度）
@@ -868,6 +874,7 @@ class LayeredSearch:
 **デメリット**: スケールしない
 
 **手順**:
+
 ```sql
 -- Supabaseダッシュボード > SQL Editorで実行
 
@@ -875,14 +882,15 @@ class LayeredSearch:
 insert into public.users (email, user_name, language, notion_api_key, google_docs_url, source_type)
 values
   ('user1@example.com', 'User 1', 'japanese', 'ntn_xxxxx', null, 'notion'),
-  ('user2@example.com', 'User 2', 'english', null, 'https://docs.google.com/...', 'gdocs'),
-  ('user3@example.com', 'User 3', 'japanese', 'ntn_yyyyy', 'https://docs.google.com/...', 'both')
+  ('user2@example.com', 'User 2', 'english', null, '<https://docs.google.com/>...', 'gdocs'),
+  ('user3@example.com', 'User 3', 'japanese', 'ntn_yyyyy', '<https://docs.google.com/>...', 'both')
 returning id, email, user_name;
 
 -- 2. 生成されたUUIDをメモ（環境変数に設定）
 ```
 
 **移行スクリプト例**:
+
 ```python
 # tools/migrate_users_from_sheet.py
 
@@ -910,7 +918,7 @@ def migrate_users_from_sheet(spreadsheet_id: str):
 
 ---
 
-#### オプションB: CLI管理ツール（バランス型）
+### オプションB: CLI管理ツール（バランス型）
 
 **実装時間**: 2-3時間
 **適用場面**: 定期的にユーザーを追加する必要がある
@@ -918,6 +926,7 @@ def migrate_users_from_sheet(spreadsheet_id: str):
 **デメリット**: 非技術者には敷居が高い
 
 **実装内容**:
+
 ```python
 # tools/user_manager.py
 
@@ -949,7 +958,7 @@ def list_users():
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     result = supabase.table('users').select('*').eq('is_active', True).execute()
 
-    print(f"\n📋 登録ユーザー一覧 ({len(result.data)}人)\n")
+    print(f"\\n📋 登録ユーザー一覧 ({len(result.data)}人)\\n")
     for user in result.data:
         sources = []
         if user['notion_api_key']:
@@ -960,7 +969,7 @@ def list_users():
         print(f"• {user['user_name']} ({user['email']})")
         print(f"  ID: {user['id']}")
         print(f"  データソース: {', '.join(sources)}")
-        print(f"  最終分析: {user['last_analysis_at'] or '未実行'}\n")
+        print(f"  最終分析: {user['last_analysis_at'] or '未実行'}\\n")
 
 def deactivate_user(email: str):
     """ユーザーを無効化（データは保持）"""
@@ -1008,11 +1017,12 @@ if __name__ == '__main__':
 ```
 
 **使用例**:
+
 ```bash
 # ユーザー追加
-python tools/user_manager.py add \
-  --email yuki@example.com \
-  --name "Yuki Agatsuma" \
+python tools/user_manager.py add \\
+  --email yuki@example.com \\
+  --name "Yuki Agatsuma" \\
   --notion-api-key ntn_xxxxx
 
 # ユーザー一覧
@@ -1024,15 +1034,17 @@ python tools/user_manager.py deactivate --email yuki@example.com
 
 ---
 
-#### オプションC: Webベース管理画面（Phase 2実装予定）
+### オプションC: Webベース管理画面（Phase 2実装予定）
 
 **実装時間**: 2-3日
 **適用場面**:
+
 - 非技術者がユーザー管理する
 - セルフサービス登録が必要
 - 分析履歴の可視化が必要
 
 **技術スタック**:
+
 - Frontend: Next.js 14 (App Router) + TypeScript
 - UI: Tailwind CSS + shadcn/ui
 - Backend: Supabase (Auth + Database + RLS)
@@ -1040,6 +1052,7 @@ python tools/user_manager.py deactivate --email yuki@example.com
 - デプロイ: Vercel
 
 **ディレクトリ構成**:
+
 ```
 pickles-admin/                    # 新規Next.jsプロジェクト
 ├── app/
@@ -1083,34 +1096,30 @@ pickles-admin/                    # 新規Next.jsプロジェクト
 **主要画面**:
 
 1. **ログイン画面** (`/login`)
-   - Email/Password または Magic Link認証
-   - Supabase Auth UI コンポーネント使用
-
+    - Email/Password または Magic Link認証
+    - Supabase Auth UI コンポーネント使用
 2. **ダッシュボード** (`/dashboard`)
-   - 総ユーザー数、今週の分析実行数
-   - 最近の分析履歴（成功/失敗）
-   - システムステータス
-
+    - 総ユーザー数、今週の分析実行数
+    - 最近の分析履歴（成功/失敗）
+    - システムステータス
 3. **ユーザー一覧** (`/users`)
-   - 全ユーザーのテーブル表示
-   - フィルター: アクティブ/非アクティブ、データソース
-   - ソート: 最終分析日時、作成日時
-   - アクション: 編集、無効化、分析実行
-
+    - 全ユーザーのテーブル表示
+    - フィルター: アクティブ/非アクティブ、データソース
+    - ソート: 最終分析日時、作成日時
+    - アクション: 編集、無効化、分析実行
 4. **ユーザー詳細** (`/users/[id]`)
-   - 基本情報（メール、名前、言語）
-   - データソース設定（Notion API Key、Google Docs URL）
-   - 分析履歴（日時、ステータス、エラーログ）
-   - 発酵ノード統計（各レイヤーのノード数）
-
+    - 基本情報（メール、名前、言語）
+    - データソース設定（Notion API Key、Google Docs URL）
+    - 分析履歴（日時、ステータス、エラーログ）
+    - 発酵ノード統計（各レイヤーのノード数）
 5. **ユーザー新規作成** (`/users/new`)
-   - フォーム入力
-   - リアルタイムバリデーション
-   - 作成後に詳細画面へリダイレクト
+    - フォーム入力
+    - リアルタイムバリデーション
+    - 作成後に詳細画面へリダイレクト
 
 **認証・権限設計**:
 
-```typescript
+```tsx
 // lib/supabase/types.ts
 
 export type UserRole = 'admin' | 'user';
@@ -1129,7 +1138,7 @@ export interface AppUser {
 
 **主要機能の実装例**:
 
-```typescript
+```tsx
 // app/(dashboard)/users/page.tsx
 
 export default async function UsersPage() {
@@ -1150,7 +1159,7 @@ export default async function UsersPage() {
 }
 ```
 
-```typescript
+```tsx
 // components/users/UserForm.tsx
 
 export function UserForm({ userId }: { userId?: string }) {
@@ -1190,20 +1199,24 @@ export function UserForm({ userId }: { userId?: string }) {
 **段階的な機能追加**:
 
 Phase 2a: 基本CRUD（1日）
+
 - ユーザー一覧、作成、編集、無効化
 - Supabase Auth統合
 
 Phase 2b: 分析履歴（1日）
+
 - 過去の分析実行履歴表示
 - エラーログ表示
 - 手動分析トリガー（API経由）
 
 Phase 2c: 発酵可視化（2-3日）
+
 - 各レイヤーのノード数表示
 - 発酵メトリクスのグラフ化
 - レイヤー間の関係性可視化
 
 **デプロイ**:
+
 ```bash
 # Vercelへデプロイ
 cd pickles-admin
@@ -1216,6 +1229,7 @@ vercel env add SUPABASE_SERVICE_ROLE_KEY
 ```
 
 **Phase 2での移行完了条件**:
+
 - ✅ 全ユーザーがWeb UIから管理可能
 - ✅ Google Sheetsの完全廃止
 - ✅ セルフサービス登録の有効化
@@ -1241,6 +1255,7 @@ Phase 2（3-6ヶ月後）: フロントエンド管理画面構築
 ```
 
 **設計方針**:
+
 - ✅ メールアドレスを一意キーとして使用（UUID生成まで）
 - ✅ Google Sheets → Supabase の自動同期を実装
 - ✅ 将来のフロントエンド実装を見越したテーブル設計
@@ -1250,9 +1265,10 @@ Phase 2（3-6ヶ月後）: フロントエンド管理画面構築
 
 ### read_spreadsheet_and_execute.py の修正方針
 
-#### 推奨実装: Google Sheets + Supabase 自動同期（Phase 0）
+### 推奨実装: Google Sheets + Supabase 自動同期（Phase 0）
 
 **変更内容**:
+
 ```python
 # read_spreadsheet_and_execute.py（修正後）
 
@@ -1284,9 +1300,9 @@ class AutoSyncUserManager:
             email = row_data['email_to']
 
             # 2. Supabaseで検索（メールアドレスで照合）
-            result = self.supabase.table('users')\
-                .select('*')\
-                .eq('email', email)\
+            result = self.supabase.table('users')\\
+                .select('*')\\
+                .eq('email', email)\\
                 .execute()
 
             if result.data:
@@ -1347,7 +1363,6 @@ class AutoSyncUserManager:
         else:
             return 'unknown'
 
-
 def execute_pickles_for_user(user_data: Dict[str, str], analysis_type: str,
                              delivery_methods: str, days: int = 7) -> bool:
     """指定されたユーザーに対してPicklesを実行"""
@@ -1380,7 +1395,6 @@ def execute_pickles_for_user(user_data: Dict[str, str], analysis_type: str,
 
     return result.returncode == 0
 
-
 def update_last_analysis_time(user_id: str):
     """最終分析時刻を更新"""
     supabase = create_client(
@@ -1390,7 +1404,6 @@ def update_last_analysis_time(user_id: str):
     supabase.table('users').update({
         'last_analysis_at': datetime.now().isoformat()
     }).eq('id', user_id).execute()
-
 
 def main():
     """メイン関数"""
@@ -1448,6 +1461,7 @@ def main():
 ```
 
 **この実装の特徴**:
+
 - ✅ **Google Sheetsを真実の源泉として維持**（既存ワークフロー継続）
 - ✅ **自動同期**: Sheets読み込み時に自動的にSupabaseを更新
 - ✅ **情報更新**: API keyやGDocs URLの変更を自動反映
@@ -1455,6 +1469,7 @@ def main():
 - ✅ **最小限の変更**: 既存コードの大部分を保持
 
 **Phase 0での動作**:
+
 1. GitHub Actions または手動で実行
 2. Google Sheetsからユーザー情報を読み込み
 3. メールアドレスで Supabase の users テーブルと照合
@@ -1463,13 +1478,14 @@ def main():
 6. 各ユーザーの `last_analysis_at` を更新
 
 **Phase 1c以降への移行パス**:
+
 - Google Sheetsを参照専用にする
 - 新規ユーザーは直接Supabaseへ登録（CLI or Web UI）
 - この`AutoSyncUserManager`は廃止可能
 
 ---
 
-### main.py の修正
+### [main.py](http://main.py/) の修正
 
 ```python
 # main.py
@@ -1554,49 +1570,53 @@ jobs:
 
 ### データ移行手順
 
-#### Step 1: Supabaseセットアップ
+### Step 1: Supabaseセットアップ
+
 ```bash
-# 1. Supabaseプロジェクト作成（https://supabase.com）
+# 1. Supabaseプロジェクト作成（<https://supabase.com>）
 # 2. SQL Editorでusersテーブル作成
 # 3. 環境変数を.envに追加
 ```
 
-#### Step 2: 既存ユーザーの移行
+### Step 2: 既存ユーザーの移行
+
 ```bash
 # オプションA: 手動SQL
 # Supabase SQL Editorで実行
 
 # オプションB: 移行スクリプト
-python tools/migrate_users_from_sheet.py \
-  --spreadsheet-id 1AbcDefGhi... \
+python tools/migrate_users_from_sheet.py \\
+  --spreadsheet-id 1AbcDefGhi... \\
   --output users_migrated.json
 ```
 
-#### Step 3: read_spreadsheet_and_execute.py の切り替え
+### Step 3: read_spreadsheet_and_execute.py の切り替え
+
 ```bash
 # 修正パターン1（完全移行）を選択
 # または修正パターン2（ハイブリッド）を選択
 
 # テスト実行
-python read_spreadsheet_and_execute.py \
-  --mode supabase \
-  --analysis domi \
+python read_spreadsheet_and_execute.py \\
+  --mode supabase \\
+  --analysis domi \\
   --delivery console
 ```
 
-#### Step 4: 検証
+### Step 4: 検証
+
 ```bash
 # 1ユーザーで動作確認
-python main.py \
-  --user-id 12345678-1234-1234-1234-123456789abc \
-  --source notion \
-  --analysis domi \
+python main.py \\
+  --user-id 12345678-1234-1234-1234-123456789abc \\
+  --source notion \\
+  --analysis domi \\
   --delivery console
 
 # 成功したらバッチ実行
-python read_spreadsheet_and_execute.py \
-  --mode supabase \
-  --analysis domi \
+python read_spreadsheet_and_execute.py \\
+  --mode supabase \\
+  --analysis domi \\
   --delivery email_html
 ```
 
@@ -1614,7 +1634,8 @@ python read_spreadsheet_and_execute.py \
 ```
 
 **Phase 1aでの方針**:
-- ✅ 単一ユーザーで開発・検証（`--user-id`を環境変数で渡す）
+
+- ✅ 単一ユーザーで開発・検証（`-user-id`を環境変数で渡す）
 - ✅ マルチユーザー対応はPhase 1b以降
 - ✅ Google Sheetsとの統合はPhase 1c以降
 
@@ -1625,12 +1646,14 @@ python read_spreadsheet_and_execute.py \
 ### Phase 0: ユーザー管理準備（1時間）
 
 **実装内容**:
+
 - Supabase usersテーブル作成
 - read_spreadsheet_and_execute.py に自動同期機能追加
 - 環境変数設定
 - 初回同期テスト
 
 **タスク**:
+
 1. Supabaseプロジェクト作成（10分）
 2. usersテーブルSQL実行（5分）
 3. .envにSUPABASE_URL/KEY追加（5分）
@@ -1638,6 +1661,7 @@ python read_spreadsheet_and_execute.py \
 5. 初回同期テスト実行（10分）
 
 **実装の優先順位**:
+
 - 🔴 **必須**: Supabaseセットアップ、usersテーブル作成
 - 🔴 **必須**: `AutoSyncUserManager`実装
 - 🟡 **推奨**: 同期ログの確認、エラーハンドリング強化
@@ -1647,11 +1671,13 @@ python read_spreadsheet_and_execute.py \
 ### Phase 1a: 基本保存と検索（2-3日）
 
 **実装内容**:
+
 - journals テーブル作成
 - 単層検索（journalsのみ）
 - 基本レポート拡張
 
 **タスク**:
+
 1. Supabaseセットアップ（1-2h）
 2. `persistence/` モジュール実装（3-4h）
 3. `fermentation/embedder.py` 実装（2h）
@@ -1663,12 +1689,14 @@ python read_spreadsheet_and_execute.py \
 ### Phase 1b: 週次発酵ノード（2-3日）
 
 **実装内容**:
+
 - fermentation_nodes テーブル追加
 - fermentation_lineage テーブル追加
 - fermentation_recipes テーブル追加
 - 週次発酵バッチ実装
 
 **タスク**:
+
 1. テーブル拡張（1h）
 2. `fermentation/batch_fermenter.py` 実装（4h）
 3. `persistence/fermentation_store.py` 実装（3h）
@@ -1679,11 +1707,13 @@ python read_spreadsheet_and_execute.py \
 ### Phase 1c: 多層検索（2日）
 
 **実装内容**:
+
 - LayeredSearch クラス
 - レイヤー混合ロジック
 - 多層レポート生成
 
 **タスク**:
+
 1. `fermentation/layered_search.py` 実装（4h）
 2. レポート出力拡張（3h）
 3. RPC関数追加（1h）
@@ -1692,11 +1722,13 @@ python read_spreadsheet_and_execute.py \
 ### Phase 2: 月次・四半期・年次発酵（段階的）
 
 **実装タイミング**:
+
 - **月次発酵**: 1ヶ月後（週次データが4週分溜まってから）
 - **四半期発酵**: 3ヶ月後（月次データが3月分溜まってから）
 - **年次発酵**: 1年後（四半期データが4期分溜まってから）
 
 **実装内容**（各レイヤー共通）:
+
 1. 発酵プロンプト登録
 2. バッチ処理追加
 3. GitHub Actions設定
@@ -1707,32 +1739,42 @@ python read_spreadsheet_and_execute.py \
 ## 🤔 設計上の考慮点
 
 ### Q1: 発酵バッチの実行タイミングは？
+
 **A**: GitHub Actionsで定期実行
+
 - 週次: 毎週月曜7:00（週明けに先週分を発酵）
 - 月次: 毎月1日8:00（月初に先月分を発酵）
 - 季節: 四半期初日9:00
 - 年次: 毎年1月1日10:00
 
 ### Q2: 発酵プロンプトはどう管理する？
+
 **A**: fermentation_recipes テーブルで管理
+
 - バージョン管理可能
 - A/Bテスト可能（同じlayer_typeで異なるrecipe_id）
 - ユーザーごとにカスタマイズ可能（将来拡張）
 
 ### Q3: 発酵メトリクスの意味は？
+
 **A**:
+
 - **diversity**: 元データ間の多様性（高いほど豊か）
 - **emergence**: 元データと発酵後の距離（高いほど創発的）
 - **density**: 情報の凝縮度（高いほど圧縮的）
 
 ### Q4: レイヤー検索の重み付けは調整可能？
+
 **A**: はい
+
 - デフォルト: journals 50% / weekly 30% / monthly 15% / quarterly 5%
 - ユーザー好みで調整可能（将来拡張）
 - 「最近の自分重視」「長期的視点重視」などプリセット提供
 
 ### Q5: コスト増加は？
+
 **A**:
+
 - 週次発酵: 約$0.01/週（GPT-4での変性生成）
 - 月次発酵: 約$0.02/月
 - 年間コスト: 約$10-15/ユーザー（全レイヤー含む）
@@ -1808,18 +1850,21 @@ dependencies = [
 ## 🎯 成功指標
 
 ### 技術指標
+
 - ✅ 各レイヤーのノードが正常生成される
 - ✅ 多層検索が1秒以内に完了
 - ✅ 発酵メトリクスが適切な範囲（diversity 0.3-0.8等）
 - ✅ バッチ処理が定期実行される
 
 ### 体験指標
+
 - ✅ 「時間の変容」を実感できる
 - ✅ 過去の自分の「熟成」に気づく
 - ✅ 異なる時間スケールでの接続に驚く
 - ✅ レイヤーをまたいだ対話が生まれる
 
 ### 発酵指標
+
 - ✅ emergence > 0.5（創発性が高い）
 - ✅ diversity 0.3-0.8（適度な多様性）
 - ✅ レイヤー間の類似度 0.4-0.7（適度な距離）
@@ -1829,12 +1874,14 @@ dependencies = [
 ## 📚 参考資料
 
 ### 発酵の概念
+
 - [発酵現象をデジタルに作るときに必要な考え方](https://kangaeruhito.jp/article/762492)
 - 複雑化による創発
 - 時間による変容
 - 微生物（AI）の代謝
 
 ### 技術スタック
+
 - [Supabase pgvector](https://supabase.com/docs/guides/ai/vector-columns)
 - [OpenAI Embeddings API](https://platform.openai.com/docs/guides/embeddings)
 - [GitHub Actions スケジュール実行](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule)
@@ -1844,12 +1891,14 @@ dependencies = [
 ## 📋 ユーザー管理の成功指標
 
 ### 技術指標
+
 - ✅ usersテーブルが正常に作成され、RLSが有効
 - ✅ 既存ユーザーがSupabaseに移行完了（UUIDが付与される）
-- ✅ main.py が --user-id 引数を受け取れる
+- ✅ [main.py](http://main.py/) が --user-id 引数を受け取れる
 - ✅ journals と fermentation_nodes がユーザーIDで分離される
 
 ### 運用指標
+
 - ✅ ユーザー追加が5分以内に完了（オプションA or B）
 - ✅ Google Sheetsからの移行がエラーなく完了
 - ✅ マルチユーザーバッチ実行が正常動作
@@ -1860,29 +1909,34 @@ dependencies = [
 ## 🚀 次のステップ（統合版）
 
 ### 即時実行（Phase 0）
+
 1. **ユーザー管理準備**: Supabaseプロジェクト作成、usersテーブル作成、初期ユーザー登録（30分）
 
 ### Phase 1a実装（2-3日）
-2. **基本保存と単層検索**: journals テーブル、persistence/ モジュール、embedder、単一ユーザーで検証
+
+1. **基本保存と単層検索**: journals テーブル、persistence/ モジュール、embedder、単一ユーザーで検証
 
 ### Phase 1b実装（2-3日）
-3. **週次発酵ノード**: fermentation_nodes、batch_fermenter、週次プロンプト、CLI管理ツール追加
+
+1. **週次発酵ノード**: fermentation_nodes、batch_fermenter、週次プロンプト、CLI管理ツール追加
 
 ### Phase 1c実装（2日）
-4. **多層検索**: LayeredSearch、レイヤー混合、read_spreadsheet_and_execute.py のSupabase統合
+
+1. **多層検索**: LayeredSearch、レイヤー混合、read_spreadsheet_and_execute.py のSupabase統合
 
 ### Phase 2実装（データ蓄積後）
-5. **月次・四半期・年次発酵**: 各レイヤーのバッチ処理、GitHub Actionsスケジュール
+
+1. **月次・四半期・年次発酵**: 各レイヤーのバッチ処理、GitHub Actionsスケジュール
 
 ---
 
 ## 📝 実装の優先順位まとめ
 
 | 項目 | Phase | 優先度 | 実装時間 |
-|------|-------|--------|---------|
+| --- | --- | --- | --- |
 | usersテーブル作成 | 0 | 🔴 必須 | 5分 |
 | 初期ユーザー登録 | 0 | 🔴 必須 | 15分 |
-| main.py にuser_id追加 | 1a | 🔴 必須 | 30分 |
+| [main.py](http://main.py/) にuser_id追加 | 1a | 🔴 必須 | 30分 |
 | journals永続化 | 1a | 🔴 必須 | 3-4時間 |
 | 単層ベクトル検索 | 1a | 🔴 必須 | 2-3時間 |
 | CLI管理ツール | 1b | 🟡 推奨 | 2-3時間 |
@@ -1966,7 +2020,7 @@ dependencies = [
 ### 各フェーズでのユーザー管理方法
 
 | フェーズ | ユーザー追加方法 | ユーザー編集方法 | データの真実の源泉 |
-|---------|----------------|----------------|------------------|
+| --- | --- | --- | --- |
 | 現在 | Google Sheetsに行追加 | Sheets上で編集 | Google Sheets |
 | Phase 0 | Google Sheetsに行追加 → 自動同期 | Sheets上で編集 → 自動同期 | Google Sheets |
 | Phase 1c | CLI: `user_manager.py add` | CLI: Supabase直接編集 | Supabase |
@@ -1975,11 +2029,13 @@ dependencies = [
 ### 移行時の注意点
 
 **Phase 0 → Phase 1c**:
+
 - ✅ Google Sheetsは削除しない（参照用として保持）
 - ✅ 新規ユーザーは `AutoSyncUserManager` を経由せず直接Supabaseへ
 - ✅ `read_spreadsheet_and_execute.py` は徐々に使用頻度を下げる
 
 **Phase 1c → Phase 2**:
+
 - ✅ Web UIでのユーザー管理を優先
 - ✅ CLIツールは開発者用として残す
 - ✅ Google Sheets完全廃止のタイミングを決定
@@ -2002,5 +2058,4 @@ dependencies = [
 
 ---
 
-*最終更新: 2025-12-03*
-*バージョン: 3.0（ユーザー管理統合版 - フロントエンド移行パス明確化）*
+*最終更新: 2025-12-03バージョン: 3.0（ユーザー管理統合版 - フロントエンド移行パス明確化）*
